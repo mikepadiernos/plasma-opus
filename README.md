@@ -277,8 +277,9 @@ language setup.
 - **Tabs and status:** position tab bars per pane and layout, or keep them
   together between stacked panes. Show or hide close buttons and configure
   status-bar indicators and their order.
-- **Views:** enable the
-  [file-list minimap](docs/CAVEATS.md#file-list-minimap) and set its width.
+- **Views:** enable the file-list minimap, which covers every shown item,
+  including expanded folders, and follows compact view's columns, and set its
+  width.
   Choose Information panel fields and their order, with optional hover
   information. Set a theme, light, dark or checkerboard background for
   transparent images without changing the image.

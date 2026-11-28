@@ -364,7 +364,7 @@ in a local gallery, and edit or convert images without leaving Plasma Opus.
       click-to-play available independently of gallery playback [#123]
 
 **Caveats:** [Previews and gallery](CAVEATS.md#previews-and-gallery), tracked in
-[#259], [#260], [#264], [#266], [#267], [#302] and [#303].
+[#259], [#260], [#264], [#266], [#267] and [#303].
 
 ### M06: Preview and gallery settings
 
@@ -409,7 +409,7 @@ other files open in their default application. Folders and executable handling
 are unchanged, and the preview panel's Open button opens the application.
 
 **Caveats:** [Previews and gallery](CAVEATS.md#previews-and-gallery), tracked in
-[#260], [#264], [#266], [#302] and [#303].
+[#260], [#264], [#266] and [#303].
 
 ### M07: Editor
 
@@ -2898,7 +2898,6 @@ the end of this file.
 [#296]: https://github.com/mikepadiernos/plasma-opus/issues/296
 [#297]: https://github.com/mikepadiernos/plasma-opus/issues/297
 [#298]: https://github.com/mikepadiernos/plasma-opus/issues/298
-[#302]: https://github.com/mikepadiernos/plasma-opus/issues/302
 [#303]: https://github.com/mikepadiernos/plasma-opus/issues/303
 [#307]: https://github.com/mikepadiernos/plasma-opus/issues/307
 [#309]: https://github.com/mikepadiernos/plasma-opus/issues/309

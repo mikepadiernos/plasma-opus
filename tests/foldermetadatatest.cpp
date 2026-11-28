@@ -7,8 +7,43 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QSet>
 #include <QTemporaryDir>
 #include <QTest>
+
+#include <functional>
+
+namespace
+{
+QString metadataFile(const QTemporaryDir &folder)
+{
+    return folder.filePath(QStringLiteral(".mfm.json"));
+}
+
+void writeRaw(const QTemporaryDir &folder, const QByteArray &bytes)
+{
+    QFile file(metadataFile(folder));
+    QVERIFY(file.open(QIODevice::WriteOnly | QIODevice::Truncate));
+    QCOMPARE(file.write(bytes), bytes.size());
+}
+
+QByteArray readRaw(const QTemporaryDir &folder)
+{
+    QFile file(metadataFile(folder));
+    return file.open(QIODevice::ReadOnly) ? file.readAll() : QByteArray();
+}
+
+QJsonObject rawObject(const QTemporaryDir &folder)
+{
+    return QJsonDocument::fromJson(readRaw(folder)).object();
+}
+
+const QJsonObject Unknown{
+    {QStringLiteral("futureKey"), QJsonObject{{QStringLiteral("nested"), QJsonArray{1, QStringLiteral("x"), true}}}},
+    {QStringLiteral("tool.version"), 3},
+    {QStringLiteral("icon"), QStringLiteral("relative/icon.svg")},
+};
+}
 
 class FolderMetadataTest : public QObject
 {
@@ -224,6 +259,275 @@ private Q_SLOTS:
         QVERIFY(!error.isEmpty());
         QVERIFY(bad.open(QIODevice::ReadOnly));
         QCOMPARE(bad.readAll(), QByteArrayLiteral("invalid"));
+    }
+
+    void unknownTopLevelKeysSurviveEverySetter()
+    {
+        QTemporaryDir folder;
+        QVERIFY(folder.isValid());
+        writeRaw(folder, QJsonDocument(Unknown).toJson());
+        FolderMetadata::Format format{QStringLiteral("grid"), {QStringLiteral("size")}, QStringLiteral("name"), true, QStringLiteral("none"), true, true, true};
+        const QString file = QStringLiteral("a.txt");
+        const QList<std::function<bool()>> edits{
+            [&] {
+                return FolderMetadata::setLabel(folder.path(), file, QStringLiteral("red"));
+            },
+            [&] {
+                return FolderMetadata::setColor(folder.path(), file, QStringLiteral("#abc"));
+            },
+            [&] {
+                return FolderMetadata::setRating(folder.path(), file, 4);
+            },
+            [&] {
+                return FolderMetadata::setNote(folder.path(), file, QStringLiteral("note"));
+            },
+            [&] {
+                return FolderMetadata::togglePin(folder.path(), file);
+            },
+            [&] {
+                return FolderMetadata::setFolderColor(folder.path(), QStringLiteral("#123456"));
+            },
+            [&] {
+                return FolderMetadata::setHidden(folder.path(), true);
+            },
+            [&] {
+                return FolderMetadata::setFormat(folder.path(), format);
+            },
+            [&] {
+                return FolderMetadata::setLabel(folder.path(), file, QString());
+            },
+            [&] {
+                return FolderMetadata::setColor(folder.path(), file, QString());
+            },
+            [&] {
+                return FolderMetadata::setRating(folder.path(), file, 0);
+            },
+            [&] {
+                return FolderMetadata::setNote(folder.path(), file, QString());
+            },
+            [&] {
+                return FolderMetadata::togglePin(folder.path(), file);
+            },
+            [&] {
+                return FolderMetadata::setFolderColor(folder.path(), QString());
+            },
+            [&] {
+                return FolderMetadata::setHidden(folder.path(), false);
+            },
+            [&] {
+                return FolderMetadata::clearFormat(folder.path());
+            },
+        };
+        for (qsizetype i = 0; i < edits.size(); ++i) {
+            QVERIFY2(edits.at(i)(), qPrintable(QString::number(i)));
+            const QJsonObject raw = rawObject(folder);
+            for (auto it = Unknown.constBegin(); it != Unknown.constEnd(); ++it) {
+                QCOMPARE(raw.value(it.key()), it.value());
+            }
+        }
+        QCOMPARE(rawObject(folder), Unknown);
+    }
+
+    void unknownEntriesInKnownKeysSurvive()
+    {
+        QTemporaryDir folder;
+        QVERIFY(folder.isValid());
+        const QJsonObject labels{{QStringLiteral("teal.txt"), QStringLiteral("teal")}, {QStringLiteral("red.txt"), QStringLiteral("red")}};
+        const QJsonObject colors{{QStringLiteral("named.txt"), QStringLiteral("red")}};
+        const QJsonObject ratings{{QStringLiteral("high.txt"), 9}};
+        const QJsonObject notes{{QStringLiteral("long.txt"), QString(600, u'x')}, {QStringLiteral("object.txt"), QJsonObject{{QStringLiteral("text"), 1}}}};
+        const QJsonArray pins{QStringLiteral("kept.txt")};
+        const QJsonObject format{{QStringLiteral("view"), QStringLiteral("list")},
+                                 {QStringLiteral("columns"), QJsonArray{QStringLiteral("tags"), QStringLiteral("size"), 7}},
+                                 {QStringLiteral("sortKey"), QStringLiteral("name")},
+                                 {QStringLiteral("group"), QStringLiteral("none")},
+                                 {QStringLiteral("density"), QStringLiteral("tight")},
+                                 {QStringLiteral("calculateFolderSizes"), true}};
+        writeRaw(folder,
+                 QJsonDocument(QJsonObject{{QStringLiteral("labels"), labels},
+                                           {QStringLiteral("colors"), colors},
+                                           {QStringLiteral("ratings"), ratings},
+                                           {QStringLiteral("notes"), notes},
+                                           {QStringLiteral("pins"), pins},
+                                           {QStringLiteral("format"), format}})
+                     .toJson());
+
+        QString error;
+        QVERIFY2(FolderMetadata::setLabel(folder.path(), QStringLiteral("a"), QStringLiteral("blue"), &error), qPrintable(error));
+        QVERIFY2(FolderMetadata::setColor(folder.path(), QStringLiteral("a"), QStringLiteral("#abc"), &error), qPrintable(error));
+        QVERIFY2(FolderMetadata::setRating(folder.path(), QStringLiteral("a"), 3, &error), qPrintable(error));
+        QVERIFY2(FolderMetadata::setNote(folder.path(), QStringLiteral("a"), QStringLiteral("hi"), &error), qPrintable(error));
+        QVERIFY2(FolderMetadata::togglePin(folder.path(), QStringLiteral("a"), &error), qPrintable(error));
+        FolderMetadata::Format newFormat{QStringLiteral("grid"), {QStringLiteral("date")}, QStringLiteral("size"), false, QStringLiteral("type"), false};
+        QVERIFY2(FolderMetadata::setFormat(folder.path(), newFormat, &error), qPrintable(error));
+
+        const QJsonObject raw = rawObject(folder);
+        QJsonObject expectedLabels = labels;
+        expectedLabels.insert(QStringLiteral("a"), QStringLiteral("blue"));
+        QCOMPARE(raw.value(QStringLiteral("labels")).toObject(), expectedLabels);
+        QCOMPARE(raw.value(QStringLiteral("colors")).toObject().value(QStringLiteral("named.txt")), colors.value(QStringLiteral("named.txt")));
+        QCOMPARE(raw.value(QStringLiteral("ratings")).toObject().value(QStringLiteral("high.txt")), ratings.value(QStringLiteral("high.txt")));
+        QJsonObject expectedNotes = notes;
+        expectedNotes.insert(QStringLiteral("a"), QStringLiteral("hi"));
+        QCOMPARE(raw.value(QStringLiteral("notes")).toObject(), expectedNotes);
+        QCOMPARE(raw.value(QStringLiteral("pins")).toArray(), (QJsonArray{QStringLiteral("kept.txt"), QStringLiteral("a")}));
+
+        const QJsonObject savedFormat = raw.value(QStringLiteral("format")).toObject();
+        QCOMPARE(savedFormat.value(QStringLiteral("density")).toString(), QStringLiteral("tight"));
+        QCOMPARE(savedFormat.value(QStringLiteral("columns")).toArray(), (QJsonArray{QStringLiteral("date"), QStringLiteral("tags"), 7}));
+        QCOMPARE(savedFormat.value(QStringLiteral("view")).toString(), QStringLiteral("grid"));
+        QVERIFY(!savedFormat.contains(QStringLiteral("calculateFolderSizes")));
+        FolderMetadata::Format actual;
+        QVERIFY(FolderMetadata::format(FolderMetadata::read(folder.path()), &actual));
+        QCOMPARE(actual.columns, QStringList{QStringLiteral("date")});
+    }
+
+    void unsupportedExistingValuesRefuseWrites_data()
+    {
+        QTest::addColumn<QByteArray>("content");
+        QTest::addColumn<int>("edit");
+
+        enum Edit {
+            Label,
+            ClearLabel,
+            Color,
+            Rating,
+            Note,
+            Pin,
+            FolderColor,
+            Hidden,
+            Format,
+            ClearFormat
+        };
+        const QByteArray longNote = "{\"notes\":{\"a\":\"" + QByteArray(600, 'x') + "\"}}";
+        QByteArray manyPins = "{\"pins\":[";
+        for (int i = 0; i < 200; ++i) {
+            manyPins += (i ? ",\"" : "\"") + QByteArray::number(i) + '"';
+        }
+        manyPins += "]}";
+        QTest::newRow("labels not an object") << QByteArray("{\"labels\":\"red\"}") << int(Label);
+        QTest::newRow("unsafe label name") << QByteArray("{\"labels\":{\"../bad\":\"red\"}}") << int(Label);
+        QTest::newRow("unknown label replaced") << QByteArray("{\"labels\":{\"a\":\"teal\"}}") << int(Label);
+        QTest::newRow("unknown label cleared") << QByteArray("{\"labels\":{\"a\":\"teal\"}}") << int(ClearLabel);
+        QTest::newRow("named colour") << QByteArray("{\"colors\":{\"a\":\"red\"}}") << int(Color);
+        QTest::newRow("rating out of range") << QByteArray("{\"ratings\":{\"a\":9}}") << int(Rating);
+        QTest::newRow("rating as text") << QByteArray("{\"ratings\":{\"a\":\"3\"}}") << int(Rating);
+        QTest::newRow("note too long") << longNote << int(Note);
+        QTest::newRow("pins not an array") << QByteArray("{\"pins\":{}}") << int(Pin);
+        QTest::newRow("pin not a name") << QByteArray("{\"pins\":[5]}") << int(Pin);
+        QTest::newRow("unsafe pin") << QByteArray("{\"pins\":[\"../x\"]}") << int(Pin);
+        QTest::newRow("too many pins") << manyPins << int(Pin);
+        QTest::newRow("folder colour name") << QByteArray("{\"color\":\"red\"}") << int(FolderColor);
+        QTest::newRow("hidden as text") << QByteArray("{\"hidden\":\"yes\"}") << int(Hidden);
+        QTest::newRow("format not an object") << QByteArray("{\"format\":\"list\"}") << int(Format);
+        QTest::newRow("unknown view") << QByteArray("{\"format\":{\"view\":\"gallery\",\"group\":\"none\"}}") << int(Format);
+        QTest::newRow("columns not an array") << QByteArray("{\"format\":{\"view\":\"list\",\"group\":\"none\",\"columns\":\"size\"}}") << int(Format);
+        QTest::newRow("sort order as text") << QByteArray("{\"format\":{\"view\":\"list\",\"group\":\"none\",\"sortAsc\":\"no\"}}") << int(Format);
+        QTest::newRow("unknown view cleared") << QByteArray("{\"format\":{\"view\":\"gallery\",\"group\":\"none\"}}") << int(ClearFormat);
+        QTest::newRow("not an object") << QByteArray("[1,2]") << int(Label);
+        QTest::newRow("invalid JSON") << QByteArray("{\"labels\":") << int(Hidden);
+    }
+
+    void unsupportedExistingValuesRefuseWrites()
+    {
+        QFETCH(QByteArray, content);
+        QFETCH(int, edit);
+        QTemporaryDir folder;
+        QVERIFY(folder.isValid());
+        writeRaw(folder, content);
+        const QString path = folder.path();
+        const QString name = QStringLiteral("a");
+        const FolderMetadata::Format format{QStringLiteral("list"), {}, QStringLiteral("name"), true, QStringLiteral("none")};
+        const QList<std::function<bool(QString *)>> edits{
+            [&](QString *error) {
+                return FolderMetadata::setLabel(path, name, QStringLiteral("red"), error);
+            },
+            [&](QString *error) {
+                return FolderMetadata::setLabel(path, name, QString(), error);
+            },
+            [&](QString *error) {
+                return FolderMetadata::setColor(path, name, QStringLiteral("#fff"), error);
+            },
+            [&](QString *error) {
+                return FolderMetadata::setRating(path, name, 0, error);
+            },
+            [&](QString *error) {
+                return FolderMetadata::setNote(path, name, QStringLiteral("x"), error);
+            },
+            [&](QString *error) {
+                return FolderMetadata::togglePin(path, name, error);
+            },
+            [&](QString *error) {
+                return FolderMetadata::setFolderColor(path, QStringLiteral("#123"), error);
+            },
+            [&](QString *error) {
+                return FolderMetadata::setHidden(path, true, error);
+            },
+            [&](QString *error) {
+                return FolderMetadata::setFormat(path, format, error);
+            },
+            [&](QString *error) {
+                return FolderMetadata::clearFormat(path, error);
+            },
+        };
+
+        QVERIFY(!edits.at(edit)(nullptr));
+        QCOMPARE(readRaw(folder), content);
+        QString error;
+        QVERIFY(!edits.at(edit)(&error));
+        QVERIFY(!error.isEmpty());
+        QCOMPARE(readRaw(folder), content);
+    }
+
+    void sizeLimitRefusesRatherThanTruncates()
+    {
+        QTemporaryDir folder;
+        QVERIFY(folder.isValid());
+        // {"padding":"…"} is 14 bytes plus the padding.
+        const QByteArray content = QJsonDocument(QJsonObject{{QStringLiteral("padding"), QString(4030, u'p')}}).toJson(QJsonDocument::Compact);
+        QCOMPARE(content.size(), 4044);
+        writeRaw(folder, content);
+
+        QString error;
+        QVERIFY(!FolderMetadata::setNote(folder.path(), QStringLiteral("a"), QString(100, u'n'), &error));
+        QVERIFY(error.contains(QStringLiteral("4,096")));
+        QCOMPARE(readRaw(folder), content);
+
+        QVERIFY2(FolderMetadata::setLabel(folder.path(), QStringLiteral("a"), QStringLiteral("red"), &error), qPrintable(error));
+        const QJsonObject raw = rawObject(folder);
+        QCOMPARE(raw.value(QStringLiteral("padding")).toString(), QString(4030, u'p'));
+        QCOMPARE(raw.value(QStringLiteral("labels")).toObject().value(QStringLiteral("a")).toString(), QStringLiteral("red"));
+        QVERIFY(readRaw(folder).size() <= 4096);
+    }
+
+    void readingAppliesOnlyValidatedValues()
+    {
+        QTemporaryDir folder;
+        QVERIFY(folder.isValid());
+        QJsonObject content = Unknown;
+        content.insert(QStringLiteral("labels"),
+                       QJsonObject{{QStringLiteral("../bad"), QStringLiteral("red")}, {QStringLiteral("teal.txt"), QStringLiteral("teal")}});
+        content.insert(QStringLiteral("ratings"), QJsonObject{{QStringLiteral("high.txt"), 9}});
+        content.insert(QStringLiteral("format"),
+                       QJsonObject{{QStringLiteral("view"), QStringLiteral("list")},
+                                   {QStringLiteral("group"), QStringLiteral("none")},
+                                   {QStringLiteral("columns"), QJsonArray{QStringLiteral("tags")}},
+                                   {QStringLiteral("density"), QStringLiteral("tight")}});
+        writeRaw(folder, QJsonDocument(content).toJson());
+
+        QString error;
+        QVERIFY2(FolderMetadata::setRating(folder.path(), QStringLiteral("good.txt"), 2, &error), qPrintable(error));
+        QVERIFY2(FolderMetadata::setHidden(folder.path(), true, &error), qPrintable(error));
+        QCOMPARE(rawObject(folder).value(QStringLiteral("icon")).toString(), QStringLiteral("relative/icon.svg"));
+
+        const QJsonObject metadata = FolderMetadata::read(folder.path(), &error);
+        QVERIFY(error.isEmpty());
+        const QStringList keys = metadata.keys();
+        QCOMPARE(QSet<QString>(keys.cbegin(), keys.cend()), (QSet<QString>{QStringLiteral("ratings"), QStringLiteral("hidden"), QStringLiteral("format")}));
+        QCOMPARE(metadata.value(QStringLiteral("ratings")).toObject(), (QJsonObject{{QStringLiteral("good.txt"), 2}}));
+        const QJsonObject format = metadata.value(QStringLiteral("format")).toObject();
+        QVERIFY(!format.contains(QStringLiteral("density")));
+        QVERIFY(format.value(QStringLiteral("columns")).toArray().isEmpty());
     }
 };
 

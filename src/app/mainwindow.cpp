@@ -53,6 +53,7 @@
 #include "foldertree.h"
 #include "folderview.h"
 #include "gallerywindow.h"
+#include "hiddenfolders.h"
 #include "indexbackend.h"
 #include "indexstatusdialog.h"
 #include "informationpanel.h"
@@ -178,6 +179,7 @@
 
 #include <QAbstractItemView>
 #include <QApplication>
+#include <QCheckBox>
 #include <QClipboard>
 #include <QCloseEvent>
 #include <QComboBox>
@@ -2293,10 +2295,16 @@ void MainWindow::editFolderLook(const QUrl &folder)
     if (colorIndex >= 0) {
         color->setCurrentIndex(colorIndex);
     }
+    const bool wasHidden = FolderMetadata::hidden(metadata);
+    auto *hidden = new QCheckBox(i18nc("@option:check", "Hide in parent folder"), &dialog);
+    hidden->setObjectName(QStringLiteral("folderLookHidden"));
+    hidden->setToolTip(i18nc("@info:tooltip", "List this folder in its parent folder only while hidden files are shown"));
+    hidden->setChecked(wasHidden);
 
     auto *form = new QFormLayout(&dialog);
     form->addRow(i18nc("@label:listbox", "Icon:"), icon);
     form->addRow(i18nc("@label:listbox", "Colour:"), color);
+    form->addRow(QString(), hidden);
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
     form->addRow(buttons);
     connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
@@ -2315,6 +2323,10 @@ void MainWindow::editFolderLook(const QUrl &folder)
         return;
     }
     refreshFolderColors();
+    if (hidden->isChecked() != wasHidden && !HiddenFolders::instance()->setHidden(folder.toLocalFile(), hidden->isChecked(), &error)) {
+        showStatusMessage(i18nc("@info:status", "Could not change whether the folder is hidden: %1", error));
+        return;
+    }
     KConfigGroup desktopEntry = directoryConfig.group(QStringLiteral("Desktop Entry"));
     const QString iconName = icon->currentData().toString();
     if (iconName.isEmpty()) {
@@ -2336,6 +2348,9 @@ void MainWindow::editFolderLook(const QUrl &folder)
     m_combinedPanel->folderTree()->reload();
     m_folderTree->reveal(folder);
     m_combinedPanel->folderTree()->reveal(folder);
+    if (hidden->isChecked() && !wasHidden && !activePane()->view()->showHiddenFiles()) {
+        showStatusMessage(i18nc("@info:status", "The folder is listed in its parent folder only while hidden files are shown."));
+    }
 }
 
 void MainWindow::extractToOtherPane()

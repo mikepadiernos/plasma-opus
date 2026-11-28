@@ -140,7 +140,8 @@ highlighted.
   the current tab, like any other navigation.
 - Clicking a file opens the folder the parent column lists, with that file
   selected.
-- Hidden items follow the pane's **Show Hidden Files** setting.
+- Hidden items, including local folders set to **Hide in parent folder** in
+  **Folder Look…**, follow the pane's **Show Hidden Files** setting.
 - Items are sorted by name, folders first, whatever the pane's sorting.
 - Renaming, dragging and context menus are not available there; use the
   current column for file actions.
@@ -738,8 +739,8 @@ Like Yazi, a focused folder previews what it contains: a read-only list of its
 entries, with their icons and names, folders first and sorted by name, as in
 the parent column.
 
-- Hidden entries follow the pane's **Show Hidden Files** setting and change
-  with it.
+- Hidden entries, including local folders set to **Hide in parent folder**,
+  follow the pane's **Show Hidden Files** setting and change with it.
 - The title is the folder's name, and the footer shows its type, the target of
   a symbolic link and its modification date.
 - The list is loaded in the background with KIO, as the folder view lists

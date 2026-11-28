@@ -4,6 +4,7 @@
 
 #include "foldergates.h"
 #include "folderview.h"
+#include "hiddenfolders.h"
 #include "namefilter.h"
 #include "symbolicicon.h"
 #include "transferqueue.h"
@@ -49,7 +50,7 @@ QString parentColumnDescription()
     return i18nc("@info:accessibility", "The items next to the current folder; choose one to open it");
 }
 
-/// Hides items inside locked password-gated folders.
+/// Hides items inside locked password-gated folders, and folders their metadata hides.
 class GateFilterProxyModel : public KDirSortFilterProxyModel
 {
 public:
@@ -62,7 +63,11 @@ protected:
             return false;
         }
         const auto *model = static_cast<const KDirModel *>(sourceModel());
-        return !FolderGates::instance()->hidesItem(model->itemForIndex(model->index(sourceRow, 0, sourceParent)));
+        const KFileItem item = model->itemForIndex(model->index(sourceRow, 0, sourceParent));
+        if (FolderGates::instance()->hidesItem(item)) {
+            return false;
+        }
+        return !HiddenFolders::instance()->hidesItem(item, model->dirLister()->showHiddenFiles());
     }
 };
 }
@@ -80,6 +85,7 @@ YaziColumns::YaziColumns(QWidget *parent)
     connect(m_proxy, &QAbstractItemModel::rowsInserted, this, &YaziColumns::highlightCurrent);
     connect(m_proxy, &QAbstractItemModel::layoutChanged, this, &YaziColumns::highlightCurrent);
     connect(FolderGates::instance(), &FolderGates::changed, m_proxy, &QSortFilterProxyModel::invalidate);
+    connect(HiddenFolders::instance(), &HiddenFolders::changed, m_proxy, &QSortFilterProxyModel::invalidate);
 
     m_parentColumn = new QListView(this);
     m_parentColumn->setObjectName(QStringLiteral("yaziParentColumn"));
@@ -299,6 +305,7 @@ void YaziColumns::resetLister()
     m_proxy->setSourceModel(nullptr);
     m_model->setDirLister(m_lister);
     m_proxy->setSourceModel(m_model);
+    HiddenFolders::instance()->track(m_lister);
     connect(m_lister, &KDirLister::completed, this, &YaziColumns::highlightCurrent);
     connect(m_lister, &KDirLister::completed, this, &YaziColumns::parentListingFinished);
     connect(m_lister, &KDirLister::jobError, this, [this](KIO::Job *job) {
@@ -563,6 +570,7 @@ void YaziColumns::setShowHiddenFiles(bool show)
     m_showHiddenFiles = show;
     m_lister->setShowHiddenFiles(show);
     m_lister->emitChanges();
+    m_proxy->invalidate();
     if (YaziPreview *builtIn = preview()) {
         builtIn->setShowHiddenFiles(show);
     }

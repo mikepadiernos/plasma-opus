@@ -30,8 +30,13 @@ bool setRating(const QString &folder, const QString &name, int rating, QString *
 bool setNote(const QString &folder, const QString &name, const QString &note, QString *error = nullptr);
 bool togglePin(const QString &folder, const QString &name, QString *error = nullptr);
 bool setFolderColor(const QString &folder, const QString &color, QString *error = nullptr);
+/// Sets or clears the upstream flag that hides @p folder from its parent folder's listing.
+bool setHidden(const QString &folder, bool hidden, QString *error = nullptr);
 bool setFormat(const QString &folder, const Format &format, QString *error = nullptr);
 bool clearFormat(const QString &folder, QString *error = nullptr);
+
+/// Whether @p metadata sets the flag that hides its folder from the parent folder's listing.
+bool hidden(const QJsonObject &metadata);
 
 /// Validates the per-folder view format before it is applied to a view.
 bool format(const QJsonObject &metadata, Format *result);

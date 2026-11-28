@@ -5,6 +5,7 @@
 #include "contentheight.h"
 #include "foldercolors.h"
 #include "foldergates.h"
+#include "hiddenfolders.h"
 #include "ignorelist.h"
 #include "symbolicicon.h"
 #include "treelines.h"
@@ -35,7 +36,7 @@ bool isAtOrBelow(const QUrl &url, const QUrl &root)
     return normalized(url) == normalized(root) || root.isParentOf(url);
 }
 
-/// Sorted folders below one root, without ignored names; the root item is titled Home or Root.
+/// Sorted folders below one root, without ignored names or folders hidden by their metadata; the root item is titled Home or Root.
 class RootProxyModel : public KDirSortFilterProxyModel
 {
 public:
@@ -77,13 +78,18 @@ protected:
     {
         const QModelIndex index = sourceModel()->index(sourceRow, 0, sourceParent);
         const KFileItem item = index.data(KDirModel::FileItemRole).value<KFileItem>();
-        return KDirSortFilterProxyModel::filterAcceptsRow(sourceRow, sourceParent) && !m_ignoreList.ignores(item.name())
-            && !FolderGates::instance()->hidesItem(item);
+        if (!KDirSortFilterProxyModel::filterAcceptsRow(sourceRow, sourceParent) || m_ignoreList.ignores(item.name())
+            || FolderGates::instance()->hidesItem(item)) {
+            return false;
+        }
+        // The root item stays, like a root whose name starts with a dot.
+        const KDirLister *lister = static_cast<const KDirModel *>(sourceModel())->dirLister();
+        return !sourceParent.isValid() || !HiddenFolders::instance()->hidesItem(item, lister->showHiddenFiles());
     }
 
 public:
-    /// Filters rows again after password-gated folders are locked or unlocked.
-    void refreshGates()
+    /// Filters rows again after password-gated folders are locked or unlocked, hidden folders are shown or hidden, or folder metadata hides or shows folders.
+    void refilter()
     {
         beginFilterChange();
         endFilterChange(QSortFilterProxyModel::Direction::Rows);
@@ -130,7 +136,9 @@ FolderTree::FolderTree(const QList<QUrl> &roots, QWidget *parent)
         auto *proxy = new RootProxyModel(root, this);
         proxy->setSourceModel(model);
         proxy->setSortCaseSensitivity(Qt::CaseInsensitive);
-        connect(FolderGates::instance(), &FolderGates::changed, proxy, &RootProxyModel::refreshGates);
+        connect(FolderGates::instance(), &FolderGates::changed, proxy, &RootProxyModel::refilter);
+        HiddenFolders::instance()->track(model->dirLister());
+        connect(HiddenFolders::instance(), &HiddenFolders::changed, proxy, &RootProxyModel::refilter);
 
         auto *tree = new FolderTreeView(this);
         tree->setModel(proxy);
@@ -290,10 +298,11 @@ void FolderTree::setShowHiddenFolders(bool show)
     }
     m_showHiddenFolders = show;
     for (const QTreeView *tree : std::as_const(m_trees)) {
-        auto *proxy = static_cast<KDirSortFilterProxyModel *>(tree->model());
+        auto *proxy = static_cast<RootProxyModel *>(tree->model());
         KDirLister *lister = static_cast<KDirModel *>(proxy->sourceModel())->dirLister();
         lister->setShowHiddenFiles(show);
         lister->emitChanges();
+        proxy->refilter();
     }
 }
 

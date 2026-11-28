@@ -205,22 +205,15 @@ its own issue:
 - **Metadata compatibility:** Plasma Opus supports a subset of Max File
   Manager's local `.mfm.json` metadata. Writing sanitizes the file and may
   discard unsupported fields or values, so back up existing metadata before
-  editing. The sanitizer retains the upstream hide-from-parent flag, but Plasma
-  Opus does not apply it to listings. ([#257][issue-257], [#258][issue-258])
+  editing. ([#257][issue-257])
 
-  - **Recommendation:** Back up `.mfm.json` before editing it in Plasma Opus and
-    do not rely on hide-from-parent to hide entries in listings. A text editor
-    can inspect a backup, but cannot make Plasma Opus apply unsupported
-    metadata.
+  - **Recommendation:** Back up `.mfm.json` before editing it in Plasma Opus. A
+    text editor can inspect a backup, but cannot make Plasma Opus apply
+    unsupported metadata.
     - Comment: [#257.7021742864][comment-257]
-    - Comment: [#258.7021743599][comment-258]
-  - **Alternatives:**
-    - Keep a versioned copy of metadata outside Plasma Opus.
-      - Comment:
-        [#257.7029666537](https://github.com/mikepadiernos/plasma-opus/issues/257#issuecomment-7029666537)
-    - Use ordinary hidden filenames where appropriate.
-      - Comment:
-        [#258.7029666857](https://github.com/mikepadiernos/plasma-opus/issues/258#issuecomment-7029666857)
+  - **Alternative:** Keep a versioned copy of metadata outside Plasma Opus.
+    - Comment:
+      [#257.7029666537](https://github.com/mikepadiernos/plasma-opus/issues/257#issuecomment-7029666537)
   - **Native tagging:** [M23 libraries](#native-tagging) are separate from
     `.mfm.json` and do not make its writes lossless.
     - Comment: [#257.7021742864][comment-257]
@@ -4685,7 +4678,6 @@ dependency and varies with the chosen output method.
 [issue-255]: https://github.com/mikepadiernos/plasma-opus/issues/255
 [issue-256]: https://github.com/mikepadiernos/plasma-opus/issues/256
 [issue-257]: https://github.com/mikepadiernos/plasma-opus/issues/257
-[issue-258]: https://github.com/mikepadiernos/plasma-opus/issues/258
 [issue-259]: https://github.com/mikepadiernos/plasma-opus/issues/259
 [issue-260]: https://github.com/mikepadiernos/plasma-opus/issues/260
 [issue-261]: https://github.com/mikepadiernos/plasma-opus/issues/261
@@ -4709,7 +4701,6 @@ dependency and varies with the chosen output method.
 [comment-255]: https://github.com/mikepadiernos/plasma-opus/issues/255#issuecomment-7021741358
 [comment-256]: https://github.com/mikepadiernos/plasma-opus/issues/256#issuecomment-7021742119
 [comment-257]: https://github.com/mikepadiernos/plasma-opus/issues/257#issuecomment-7021742864
-[comment-258]: https://github.com/mikepadiernos/plasma-opus/issues/258#issuecomment-7021743599
 [comment-259]: https://github.com/mikepadiernos/plasma-opus/issues/259#issuecomment-7021744368
 [comment-260]: https://github.com/mikepadiernos/plasma-opus/issues/260#issuecomment-7021745029
 [comment-261]: https://github.com/mikepadiernos/plasma-opus/issues/261#issuecomment-7021745774

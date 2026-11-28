@@ -109,6 +109,7 @@ ecm_add_tests(
     foldersynctest.cpp
     foldersyncprofilestest.cpp
     flatviewtest.cpp
+    hiddenfolderstest.cpp
     ignorelisttest.cpp
     indexedsearchtest.cpp
     indexstatustest.cpp
@@ -236,6 +237,12 @@ ecm_add_test(yazimodeuitest.cpp
 )
 
 ecm_add_test(foldergateuitest.cpp
+    LINK_LIBRARIES opusfm_app Qt6::Test
+    NAME_PREFIX "opusfm-"
+    GUI
+)
+
+ecm_add_test(hiddenfoldersuitest.cpp
     LINK_LIBRARIES opusfm_app Qt6::Test
     NAME_PREFIX "opusfm-"
     GUI

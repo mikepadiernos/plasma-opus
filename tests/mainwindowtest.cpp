@@ -3244,7 +3244,7 @@ private Q_SLOTS:
         // Help › Command Palette… has Dolphin's and Kate's key, which no other action, text field or Yazi mode preset uses.
         QAction *paletteAction = action(QString::fromLatin1(CommandPalette::ActionName));
         QVERIFY(paletteAction);
-        QCOMPARE(paletteAction->text(), QStringLiteral("Command Palette…"));
+        QCOMPARE(KLocalizedString::removeAcceleratorMarker(paletteAction->text()), QStringLiteral("Command Palette…"));
         auto *help = qobject_cast<QMenu *>(window.guiFactory()->container(QStringLiteral("help"), &window));
         QVERIFY(help && help->actions().contains(paletteAction));
         const QKeySequence key(Qt::CTRL | Qt::ALT | Qt::Key_I);

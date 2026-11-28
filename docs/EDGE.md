@@ -156,7 +156,12 @@ tests and caveats.
     parts, an existing output, a full destination and cancellation during
     writing.
   - **Verify:** Output ordering, error reporting and identification of
-    incomplete files.
+    incomplete files. Complete outputs, including archive volumes, get the
+    normal creation permissions for the umask; incomplete ones stay
+    owner-only.
+  - **Note:** [Split tests](../tests/filesplittertest.cpp) and
+    [archive tests](../tests/archivewritertest.cpp) cover output permissions
+    under several umasks.
 
 **References:** [archives](../src/core/archives.cpp),
 [checksum handling](../src/core/checksums.cpp),

@@ -514,7 +514,6 @@ a transfer queue and an embedded terminal.
 - [x] Linked panes and cushion treemap (Orcinus) [#166]
 
 **Caveats:** [File comparison](CAVEATS.md#file-comparison), tracked in [#311];
-[symbolic links](CAVEATS.md#symbolic-links), tracked in [#312];
 [listing export](CAVEATS.md#listing-export), tracked in [#314];
 [folder content chart](CAVEATS.md#folder-content-chart), tracked in [#315];
 [checksum files](CAVEATS.md#checksum-files), tracked in [#316];
@@ -2902,7 +2901,6 @@ the end of this file.
 [#307]: https://github.com/mikepadiernos/plasma-opus/issues/307
 [#309]: https://github.com/mikepadiernos/plasma-opus/issues/309
 [#311]: https://github.com/mikepadiernos/plasma-opus/issues/311
-[#312]: https://github.com/mikepadiernos/plasma-opus/issues/312
 [#314]: https://github.com/mikepadiernos/plasma-opus/issues/314
 [#315]: https://github.com/mikepadiernos/plasma-opus/issues/315
 [#316]: https://github.com/mikepadiernos/plasma-opus/issues/316

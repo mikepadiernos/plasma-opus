@@ -100,6 +100,63 @@ private Q_SLOTS:
         QVERIFY(actual.value(QStringLiteral("colors")).toObject().isEmpty());
         QVERIFY(actual.value(QStringLiteral("hidden")).toBool());
         QCOMPARE(actual.value(QStringLiteral("icon")).toString(), QStringLiteral("/usr/share/icons/folder.svg"));
+        QVERIFY(FolderMetadata::hidden(actual));
+    }
+
+    void hiddenFlagSetsAndClears()
+    {
+        QTemporaryDir folder;
+        QVERIFY(folder.isValid());
+        const QString metadataFile = folder.filePath(QStringLiteral(".mfm.json"));
+        QVERIFY(!FolderMetadata::hidden(FolderMetadata::read(folder.path())));
+
+        QVERIFY(FolderMetadata::setHidden(folder.path(), true));
+        QVERIFY(FolderMetadata::hidden(FolderMetadata::read(folder.path())));
+        QVERIFY(FolderMetadata::setFolderColor(folder.path(), QStringLiteral("#123456")));
+        QVERIFY(FolderMetadata::setHidden(folder.path(), true));
+        QJsonObject metadata = FolderMetadata::read(folder.path());
+        QVERIFY(FolderMetadata::hidden(metadata));
+        QCOMPARE(metadata.value(QStringLiteral("color")).toString(), QStringLiteral("#123456"));
+
+        QVERIFY(FolderMetadata::setHidden(folder.path(), false));
+        metadata = FolderMetadata::read(folder.path());
+        QVERIFY(!FolderMetadata::hidden(metadata));
+        QVERIFY(!metadata.contains(QStringLiteral("hidden")));
+        QCOMPARE(metadata.value(QStringLiteral("color")).toString(), QStringLiteral("#123456"));
+
+        QVERIFY(FolderMetadata::setHidden(folder.path(), true));
+        QVERIFY(FolderMetadata::setFolderColor(folder.path(), QString()));
+        QVERIFY(QFile::exists(metadataFile));
+        QVERIFY(FolderMetadata::setHidden(folder.path(), false));
+        QVERIFY(!QFile::exists(metadataFile));
+    }
+
+    void hiddenFlagNeedsValidMetadata()
+    {
+        QVERIFY(!FolderMetadata::hidden(QJsonObject{{QStringLiteral("hidden"), QStringLiteral("true")}}));
+        QVERIFY(!FolderMetadata::hidden(QJsonObject{{QStringLiteral("hidden"), false}}));
+        QVERIFY(FolderMetadata::hidden(QJsonObject{{QStringLiteral("hidden"), true}}));
+
+        QTemporaryDir folder;
+        QVERIFY(folder.isValid());
+        QFile file(folder.filePath(QStringLiteral(".mfm.json")));
+        QVERIFY(file.open(QIODevice::WriteOnly));
+        QByteArray oversized = QJsonDocument(QJsonObject{{QStringLiteral("hidden"), true}}).toJson();
+        oversized.append(QByteArray(4096, ' '));
+        file.write(oversized);
+        file.close();
+        QString error;
+        QVERIFY(!FolderMetadata::hidden(FolderMetadata::read(folder.path(), &error)));
+        QVERIFY(!error.isEmpty());
+        QVERIFY(!FolderMetadata::setHidden(folder.path(), false, &error));
+        QVERIFY(file.open(QIODevice::ReadOnly));
+        QCOMPARE(file.readAll(), oversized);
+        file.close();
+
+        QVERIFY(file.open(QIODevice::WriteOnly | QIODevice::Truncate));
+        file.write("{\"hidden\": true");
+        file.close();
+        QVERIFY(!FolderMetadata::hidden(FolderMetadata::read(folder.path())));
     }
 
     void nearestInheritedFormatTakesPrecedence()

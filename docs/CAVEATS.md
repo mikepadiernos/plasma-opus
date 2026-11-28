@@ -394,18 +394,6 @@ tracked in its own issue:
     - Comment:
       [#303.7029670421](https://github.com/mikepadiernos/plasma-opus/issues/303#issuecomment-7029670421)
 
-- **Conversion output:** The destination filesystem must support atomic
-  no-replace renames, which prevent overwriting files, including those created
-  after preview. Unsupported filesystems cause conversion failures.
-  ([#302][issue-302])
-
-  - **Recommendation:** Convert to a filesystem that supports atomic no-replace
-    renames, then copy the output if needed.
-    - Comment: [#302.7021752278][comment-302]
-  - **Alternative:** Use a separate conversion tool with a fresh destination.
-    - Comment:
-      [#302.7029670102](https://github.com/mikepadiernos/plasma-opus/issues/302#issuecomment-7029670102)
-
 ## Editor
 
 The text editor's drafts, Markdown handling and editing in the preview have
@@ -4662,7 +4650,6 @@ dependency and varies with the chosen output method.
 [issue-265]: https://github.com/mikepadiernos/plasma-opus/issues/265
 [issue-266]: https://github.com/mikepadiernos/plasma-opus/issues/266
 [issue-267]: https://github.com/mikepadiernos/plasma-opus/issues/267
-[issue-302]: https://github.com/mikepadiernos/plasma-opus/issues/302
 [issue-303]: https://github.com/mikepadiernos/plasma-opus/issues/303
 [issue-307]: https://github.com/mikepadiernos/plasma-opus/issues/307
 [issue-309]: https://github.com/mikepadiernos/plasma-opus/issues/309
@@ -4683,7 +4670,6 @@ dependency and varies with the chosen output method.
 [comment-265]: https://github.com/mikepadiernos/plasma-opus/issues/265#issuecomment-7021749894
 [comment-266]: https://github.com/mikepadiernos/plasma-opus/issues/266#issuecomment-7021750778
 [comment-267]: https://github.com/mikepadiernos/plasma-opus/issues/267#issuecomment-7021751490
-[comment-302]: https://github.com/mikepadiernos/plasma-opus/issues/302#issuecomment-7021752278
 [comment-303]: https://github.com/mikepadiernos/plasma-opus/issues/303#issuecomment-7021753023
 [comment-307]: https://github.com/mikepadiernos/plasma-opus/issues/307#issuecomment-7021754467
 [comment-309]: https://github.com/mikepadiernos/plasma-opus/issues/309#issuecomment-7021755164

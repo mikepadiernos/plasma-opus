@@ -145,6 +145,7 @@ ecm_add_tests(
     markdownexporttest.cpp
     metadataeditortest.cpp
     metadataimporttest.cpp
+    minimapbandstest.cpp
     navigationhistorytest.cpp
     navigationshortcutstest.cpp
     nextcloudaccounttest.cpp

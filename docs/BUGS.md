@@ -15,12 +15,12 @@ tracking rules.
 > [Edge cases](EDGE.md) are possible scenarios, not confirmed bugs.
 
 > [!NOTE]
-> 16 of 19 tracked bugs are merged into `main`. Three reports are open in
-> Backlog: abbreviated breadcrumbs spreading out their segments
-> ([#756][issue-756]), slow opening of the app and Preferences
-> ([#752][issue-752]) and a test reliability report ([#696][issue-696]).
-> Issue states and project statuses were last checked against GitHub on
-> 2026-11-27.
+> 16 of 20 tracked bugs are merged into `main`. Four reports are open in
+> Backlog: a failing `install.sh` build ([#785][issue-785]), abbreviated
+> breadcrumbs spreading out their segments ([#756][issue-756]), slow opening
+> of the app and Preferences ([#752][issue-752]) and a test reliability
+> report ([#696][issue-696]). Issue states and project statuses were last
+> checked against GitHub on 2026-11-28.
 
 ## Contents
 
@@ -35,6 +35,7 @@ Newest first. Each bug links to its report below.
 
 | Issue             | Bug                                                                                                                    | Complete?   | Project status      |
 | ----------------- | ---------------------------------------------------------------------------------------------------------------------- | ----------- | ------------------- |
+| [#785][issue-785] | [`install.sh` build stops with "subcommand failed"](#install-build-failure)                                            | ![No][no]   | ![Backlog][backlog] |
 | [#756][issue-756] | [Abbreviated breadcrumbs spread their segments across the location bar](#abbreviated-breadcrumb-spacing)               | ![No][no]   | ![Backlog][backlog] |
 | [#752][issue-752] | [Opening the app and Preferences takes a long time](#slow-startup-and-preferences)                                     | ![No][no]   | ![Backlog][backlog] |
 | [#696][issue-696] | [Checksum test times out waiting for the folder listing under load](#checksum-test-listing-timeout)                    | ![No][no]   | ![Backlog][backlog] |
@@ -73,6 +74,34 @@ Statuses use the project board's names, in workflow order.
 Every report uses the same fields in the same order. "Not recorded" means the
 field is not captured in this log; see the linked issue for any further
 detail.
+
+### Install build failure
+
+- **Issue:** [#785][issue-785] ![Backlog][backlog]
+- **Severity:** High (installation)
+- **Summary:** Installing the latest `main` with `./install.sh` stops during
+  the build with `ninja: build stopped: subcommand failed.`, so the installed
+  version is not updated.
+- **Evidence:** Not recorded. Ninja prints this line after a build command
+  fails; the failing command and its error, after a `FAILED:` line, have not
+  been captured yet. The reporter's commit, distribution and compiler are not
+  yet known.
+- **Steps to reproduce:** Update the checkout to the latest `main` and run
+  `./install.sh`.
+- **Expected behaviour:** The build completes and Plasma Opus is installed.
+- **Actual behaviour:** The build stops before installing. It does not
+  reproduce in the dev container (Fedora 44, GCC 16.2.1, Qt 6.11.2, KDE
+  Frameworks 6.32): `install.sh` succeeds at `504456f` and `7d5aa14` from a
+  clean tree, when updating an existing `build-plasma` tree from `e803e63`,
+  and with every optional dependency disabled. The cause is therefore
+  host-specific; running out of memory during the parallel Release build, or
+  M28–M31 code using an API newer than the host's Qt or KDE Frameworks, are
+  possible but unverified.
+- **Resolution:** Not resolved. Next steps: capture the first error with
+  `./install.sh 2>&1 | tee install.log` and `grep -n -A25 FAILED install.log`,
+  and record the commit, distribution and `c++ --version`. Workarounds to
+  try: `./install.sh --jobs 2`, or a fresh build tree with
+  `OPUSFM_BUILD_DIR=build-plasma-new ./install.sh`.
 
 ### Abbreviated breadcrumb spacing
 
@@ -462,6 +491,7 @@ Newest first, using the same fields as open reports.
 [issue-696]: https://github.com/mikepadiernos/plasma-opus/issues/696
 [issue-752]: https://github.com/mikepadiernos/plasma-opus/issues/752
 [issue-756]: https://github.com/mikepadiernos/plasma-opus/issues/756
+[issue-785]: https://github.com/mikepadiernos/plasma-opus/issues/785
 [pr-451]: https://github.com/mikepadiernos/plasma-opus/pull/451
 [pr-452]: https://github.com/mikepadiernos/plasma-opus/pull/452
 [pr-454]: https://github.com/mikepadiernos/plasma-opus/pull/454

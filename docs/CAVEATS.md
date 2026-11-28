@@ -114,16 +114,15 @@ tracked in its own issue:
   `photos.7z.001`, as 7-Zip does. They are not ZIP spanned or RAR multi-volume
   archives, so only 7-Zip opens the first part directly; KIO archive browsing
   and most other tools need the parts joined first. Splitting needs free space
-  for the whole archive and its parts, and creates the parts with owner-only
-  permissions. An archive smaller than the volume size stays a single file. If
-  splitting fails, the parts written so far are removed and the whole archive
-  is kept. Whether to split by default, and the volume size, are set under
-  **Preferences › Archives › Defaults**. ([#732][issue-732])
+  for the whole archive and its parts. An archive smaller than the volume size
+  stays a single file. If splitting fails, the parts written so far are removed
+  and the whole archive is kept. Whether to split by default, and the volume
+  size, are set under **Preferences › Archives › Defaults**.
+  ([#732][issue-732])
 
   - **Recommendation:** Keep the parts together and open the first with 7-Zip,
     or join them with **File › Combine Files**, naming the result after the
-    original archive. Check free space before splitting, and adjust the parts'
-    permissions before sharing them with other local users.
+    original archive. Check free space before splitting.
     - Comment: [#732.7200937321][comment-732]
   - **Alternative:** For RAR multi-volume archives, choose **More Options in
     Ark…**; Ark offers them only when RAR's proprietary `rar` program is
@@ -397,22 +396,15 @@ tracked in its own issue:
 
 - **Conversion output:** The destination filesystem must support atomic
   no-replace renames, which prevent overwriting files, including those created
-  after preview. Unsupported filesystems cause conversion failures. Converted
-  files have owner-only permissions; change permissions if needed before sharing
-  them. ([#302][issue-302], [#304][issue-304])
+  after preview. Unsupported filesystems cause conversion failures.
+  ([#302][issue-302])
 
   - **Recommendation:** Convert to a filesystem that supports atomic no-replace
-    renames, then copy the output if needed. Review permissions before sharing;
-    for local files, `chmod` can grant only the access needed.
+    renames, then copy the output if needed.
     - Comment: [#302.7021752278][comment-302]
-    - Comment: [#304.7021753785][comment-304]
-  - **Alternatives:**
-    - Use a separate conversion tool with a fresh destination.
-      - Comment:
-        [#302.7029670102](https://github.com/mikepadiernos/plasma-opus/issues/302#issuecomment-7029670102)
-    - Use a targeted ACL when sharing converted output.
-      - Comment:
-        [#304.7029670734](https://github.com/mikepadiernos/plasma-opus/issues/304#issuecomment-7029670734)
+  - **Alternative:** Use a separate conversion tool with a fresh destination.
+    - Comment:
+      [#302.7029670102](https://github.com/mikepadiernos/plasma-opus/issues/302#issuecomment-7029670102)
 
 ## Editor
 
@@ -1070,17 +1062,15 @@ Split and combine supports local regular files and has these limits
 - **Interruptions:** Inputs can change during processing. Failures or
   cancellation can leave incomplete output, and many small parts can be
   expensive.
-- **Output:** Existing outputs are never overwritten and new files are
-  owner-only.
+- **Output:** Existing outputs are never overwritten.
 
 - **Recommendation:** Check the complete part list and order before combining,
   keep originals and verify the reconstructed file with a checksum. Avoid
   changing inputs while processing. Inspect and remove unwanted partial outputs
-  after errors or cancellation, choose a sensible part size, and adjust output
-  permissions if sharing is needed. GNU `split` and `cat` are external
-  alternatives; verify part order and handle output safely to avoid overwriting
-  existing files. GNU `sha256sum` can verify reconstructed files against a
-  trusted checksum.
+  after errors or cancellation, and choose a sensible part size. GNU `split`
+  and `cat` are external alternatives; verify part order and handle output
+  safely to avoid overwriting existing files. GNU `sha256sum` can verify
+  reconstructed files against a trusted checksum.
   - Comment: [#318.7022199214][comment-318]
 - **Alternative:** Create separate recovery information with PAR2.
   - Comment:
@@ -4674,7 +4664,6 @@ dependency and varies with the chosen output method.
 [issue-267]: https://github.com/mikepadiernos/plasma-opus/issues/267
 [issue-302]: https://github.com/mikepadiernos/plasma-opus/issues/302
 [issue-303]: https://github.com/mikepadiernos/plasma-opus/issues/303
-[issue-304]: https://github.com/mikepadiernos/plasma-opus/issues/304
 [issue-307]: https://github.com/mikepadiernos/plasma-opus/issues/307
 [issue-309]: https://github.com/mikepadiernos/plasma-opus/issues/309
 [issue-311]: https://github.com/mikepadiernos/plasma-opus/issues/311
@@ -4696,7 +4685,6 @@ dependency and varies with the chosen output method.
 [comment-267]: https://github.com/mikepadiernos/plasma-opus/issues/267#issuecomment-7021751490
 [comment-302]: https://github.com/mikepadiernos/plasma-opus/issues/302#issuecomment-7021752278
 [comment-303]: https://github.com/mikepadiernos/plasma-opus/issues/303#issuecomment-7021753023
-[comment-304]: https://github.com/mikepadiernos/plasma-opus/issues/304#issuecomment-7021753785
 [comment-307]: https://github.com/mikepadiernos/plasma-opus/issues/307#issuecomment-7021754467
 [comment-309]: https://github.com/mikepadiernos/plasma-opus/issues/309#issuecomment-7021755164
 [comment-311]: https://github.com/mikepadiernos/plasma-opus/issues/311#issuecomment-7021755780

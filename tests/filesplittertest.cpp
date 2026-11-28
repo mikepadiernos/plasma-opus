@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 #include "filesplitter.h"
+#include "umaskfixture.h"
 
 #include <QFile>
 #include <QFileInfo>
@@ -45,12 +46,60 @@ private Q_SLOTS:
         QCOMPARE(read(split.outputs.at(0)), QByteArray("abc"));
         QCOMPARE(read(split.outputs.at(1)), QByteArray("def"));
         QCOMPARE(read(split.outputs.at(2)), QByteArray("gh"));
-        QVERIFY(!(QFileInfo(split.outputs.first()).permissions()
-                  & (QFileDevice::ReadGroup | QFileDevice::WriteGroup | QFileDevice::ExeGroup | QFileDevice::ReadOther | QFileDevice::WriteOther
-                     | QFileDevice::ExeOther)));
         const auto combined = FileSplitter::combine(split.outputs, dir.filePath(QStringLiteral("combined")));
         QVERIFY2(combined.error.isEmpty(), qPrintable(combined.error));
         QCOMPARE(read(combined.outputs.first()), QByteArray("abcdefgh"));
+    }
+
+    void completeOutputsUseTheDefaultCreationMode_data()
+    {
+        QTest::addColumn<int>("mask");
+        QTest::addColumn<int>("expected");
+        QTest::newRow("022") << 022 << 0644;
+        QTest::newRow("077") << 077 << 0600;
+        QTest::newRow("002") << 02 << 0664;
+    }
+
+    void completeOutputsUseTheDefaultCreationMode()
+    {
+        QFETCH(int, mask);
+        QFETCH(int, expected);
+        const ScopedUmask scoped(mask);
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString source = dir.filePath(QStringLiteral("source"));
+        QVERIFY(put(source, "abcdefgh"));
+        const auto split = FileSplitter::split(source, dir.filePath(QStringLiteral("part")), 3);
+        QVERIFY2(split.error.isEmpty(), qPrintable(split.error));
+        QCOMPARE(split.outputs.size(), 3);
+        for (const QString &part : split.outputs) {
+            QCOMPARE(fileMode(part), expected);
+        }
+        const auto combined = FileSplitter::combine(split.outputs, dir.filePath(QStringLiteral("combined")));
+        QVERIFY2(combined.error.isEmpty(), qPrintable(combined.error));
+        QCOMPARE(fileMode(combined.outputs.first()), expected);
+    }
+
+    void incompleteOutputsStayOwnerOnly()
+    {
+        const ScopedUmask scoped(02);
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString source = dir.filePath(QStringLiteral("source"));
+        QVERIFY(put(source, QByteArray(2 * 1024 * 1024, 'x')));
+        int checks = 0;
+        const auto split = FileSplitter::split(source, dir.filePath(QStringLiteral("part")), 2 * 1024 * 1024, [&checks] {
+            return ++checks == 3;
+        });
+        QVERIFY(!split.error.isEmpty());
+        QCOMPARE(split.outputs.size(), 1);
+        QCOMPARE(fileMode(split.outputs.first()), 0600);
+        checks = 0;
+        const auto combined = FileSplitter::combine({source}, dir.filePath(QStringLiteral("combined")), [&checks] {
+            return ++checks == 3;
+        });
+        QVERIFY(!combined.error.isEmpty());
+        QCOMPARE(fileMode(combined.outputs.first()), 0600);
     }
 
     void emptyAndExactSize()

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 #include "imageconversion.h"
+#include "umaskfixture.h"
 
 #include <QDir>
 #include <QFile>
@@ -59,6 +60,34 @@ private Q_SLOTS:
         QVERIFY(existing.open(QIODevice::ReadOnly));
         QCOMPARE(existing.readAll(), QByteArray("existing"));
         QCOMPARE(QImageReader(first).size(), QSize(40, 20));
+    }
+
+    void publishedOutputsUseTheDefaultCreationMode_data()
+    {
+        QTest::addColumn<int>("mask");
+        QTest::addColumn<int>("expected");
+        QTest::newRow("022") << 022 << 0644;
+        QTest::newRow("077") << 077 << 0600;
+        QTest::newRow("002") << 02 << 0664;
+    }
+
+    void publishedOutputsUseTheDefaultCreationMode()
+    {
+        QFETCH(int, mask);
+        QFETCH(int, expected);
+        const ScopedUmask scoped(mask);
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        QImage image(16, 16, QImage::Format_RGB32);
+        image.fill(Qt::blue);
+        const QString source = dir.filePath(QStringLiteral("source.png"));
+        QVERIFY(image.save(source));
+        QVERIFY(QDir().mkdir(dir.filePath(QStringLiteral("out"))));
+        const auto plan = ImageConversion::plan({QUrl::fromLocalFile(source)}, dir.filePath(QStringLiteral("out")), "png");
+        QVERIFY2(plan.error.isEmpty(), qPrintable(plan.error));
+        QVERIFY(ImageConversion::convert(plan.entries, "png", {}, 90).isEmpty());
+        QCOMPARE(fileMode(plan.entries.first().destination), expected);
+        QCOMPARE(QDir(dir.filePath(QStringLiteral("out"))).entryList(QDir::Files | QDir::Hidden), QStringList{QStringLiteral("source.png")});
     }
 
     void invalidInputAndOutputAreReported()

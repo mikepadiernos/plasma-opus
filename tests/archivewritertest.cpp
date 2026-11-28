@@ -2,6 +2,7 @@
 
 #include "archivewriter.h"
 #include "archives.h"
+#include "umaskfixture.h"
 
 #include <K7Zip>
 #include <KArchiveDirectory>
@@ -85,6 +86,7 @@ private Q_SLOTS:
 
     void splitsIntoVolumesThatJoinBack()
     {
+        const ScopedUmask scoped(027);
         QTemporaryDir root;
         QVERIFY(root.isValid());
         QFile big(root.filePath(QStringLiteral("big.bin")));
@@ -112,6 +114,7 @@ private Q_SLOTS:
             QFile part(volume);
             QVERIFY(part.open(QIODevice::ReadOnly));
             QVERIFY(part.size() <= 4096);
+            QCOMPARE(fileMode(volume), 0640);
             joined += part.readAll();
         }
         QCOMPARE(joined, bytes);

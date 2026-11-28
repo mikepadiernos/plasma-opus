@@ -53,6 +53,8 @@ add_library(opusfm_core STATIC
     fileencryption.h
     filemanagerrequest.cpp
     filemanagerrequest.h
+    filepublish.cpp
+    filepublish.h
     filesplitter.cpp
     filesplitter.h
     filetypeplaces.cpp

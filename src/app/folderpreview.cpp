@@ -2,6 +2,7 @@
 
 #include "folderpreview.h"
 #include "foldergates.h"
+#include "hiddenfolders.h"
 
 #include <KDirLister>
 #include <KDirModel>
@@ -21,12 +22,30 @@
 namespace
 {
 constexpr int RefreshDelay = 50;
+
+/// Hides folders their metadata hides from their parent folder's listing.
+class HiddenFolderProxyModel : public KDirSortFilterProxyModel
+{
+public:
+    using KDirSortFilterProxyModel::KDirSortFilterProxyModel;
+
+protected:
+    bool filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) const override
+    {
+        if (!KDirSortFilterProxyModel::filterAcceptsRow(sourceRow, sourceParent)) {
+            return false;
+        }
+        const auto *model = static_cast<const KDirModel *>(sourceModel());
+        const KFileItem item = model->itemForIndex(model->index(sourceRow, 0, sourceParent));
+        return !HiddenFolders::instance()->hidesItem(item, model->dirLister()->showHiddenFiles());
+    }
+};
 }
 
 FolderPreview::FolderPreview(QWidget *parent)
     : QWidget(parent)
     , m_model(new KDirModel(this))
-    , m_proxy(new KDirSortFilterProxyModel(this))
+    , m_proxy(new HiddenFolderProxyModel(this))
     , m_list(new QListWidget(this))
     , m_note(new QLabel(this))
     , m_refresh(new QTimer(this))
@@ -39,6 +58,7 @@ FolderPreview::FolderPreview(QWidget *parent)
             showLocked();
         }
     });
+    connect(HiddenFolders::instance(), &HiddenFolders::changed, m_proxy, &QSortFilterProxyModel::invalidate);
     m_proxy->setSortFoldersFirst(true);
     m_proxy->setSortCaseSensitivity(Qt::CaseInsensitive);
     m_proxy->sort(KDirModel::Name, Qt::AscendingOrder);
@@ -102,6 +122,7 @@ void FolderPreview::resetLister()
     m_proxy->setSourceModel(nullptr);
     m_model->setDirLister(m_lister);
     m_proxy->setSourceModel(m_model);
+    HiddenFolders::instance()->track(m_lister);
     const auto finished = [this] {
         m_timeout->stop();
         setListing(false);
@@ -174,6 +195,7 @@ void FolderPreview::setShowHiddenFiles(bool show)
     m_showHiddenFiles = show;
     m_lister->setShowHiddenFiles(show);
     m_lister->emitChanges();
+    m_proxy->invalidate();
 }
 
 bool FolderPreview::showHiddenFiles() const

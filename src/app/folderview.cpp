@@ -15,6 +15,7 @@
 #include "foldercolors.h"
 #include "foldergates.h"
 #include "foldermetadata.h"
+#include "hiddenfolders.h"
 #include "ignorelist.h"
 #include "labelcolor.h"
 #include "localizeddates.h"
@@ -156,7 +157,7 @@ KFileItemDelegate::InformationList informationForKeys(const QStringList &keys)
 }
 }
 
-/// Sorts like KDirSortFilterProxyModel and hides ignored items and items a NameFilter rejects.
+/// Sorts like KDirSortFilterProxyModel and hides ignored items, items a NameFilter rejects and folders hidden by their metadata.
 class NameFilterProxyModel : public KDirSortFilterProxyModel
 {
 public:
@@ -195,6 +196,13 @@ public:
         if (rows > 0) {
             Q_EMIT dataChanged(index(0, 0), index(rows - 1, 0), {Qt::DecorationRole});
         }
+    }
+
+    /// Filters rows again after hidden files are shown or hidden, or folder metadata hides or shows folders.
+    void refreshHidden()
+    {
+        beginFilterChange();
+        endFilterChange(QSortFilterProxyModel::Direction::Rows);
     }
 
     /// Hides folders and shows relative paths in the Type column; an empty URL ends flat mode.
@@ -537,6 +545,9 @@ protected:
             return false;
         }
         if (FolderGates::instance()->hidesItem(item)) {
+            return false;
+        }
+        if (HiddenFolders::instance()->hidesItem(item, model->dirLister()->showHiddenFiles())) {
             return false;
         }
         const QString name = item.name();
@@ -970,6 +981,11 @@ FolderView::FolderView(QWidget *parent)
     layout->addWidget(m_selectionBar);
 
     connect(FolderGates::instance(), &FolderGates::changed, this, &FolderView::updateGates);
+    HiddenFolders::instance()->track(m_lister);
+    connect(HiddenFolders::instance(), &HiddenFolders::changed, this, [this] {
+        m_proxy->refreshHidden();
+        Q_EMIT itemCountChanged();
+    });
     connect(m_lister, &KDirLister::started, this, [this](const QUrl &url) {
         if (m_historyExpanding) {
             m_historyListingJobs.insert(url.adjusted(QUrl::StripTrailingSlash));
@@ -1308,6 +1324,8 @@ void FolderView::setShowHiddenFiles(bool show)
     }
     m_lister->setShowHiddenFiles(show);
     m_lister->emitChanges();
+    m_proxy->refreshHidden();
+    Q_EMIT itemCountChanged();
     Q_EMIT hiddenFilesChanged(show);
 }
 

@@ -45,6 +45,7 @@
 #include "settingsdialog.h"
 #include "shortcutguard.h"
 #include "shortcutstorage.h"
+#include "symlinkdialog.h"
 #include "tabmodel.h"
 #include "tagfieldmanagerwidget.h"
 #include "taggroupdialog.h"
@@ -115,6 +116,7 @@
 #include <QPlainTextEdit>
 #include <QPointer>
 #include <QPushButton>
+#include <QRadioButton>
 #include <QRegularExpression>
 #include <QScopeGuard>
 #include <QScrollBar>
@@ -5734,38 +5736,61 @@ private Q_SLOTS:
         Settings::setSymlinkSuffix(QString());
         QTemporaryDir dir;
         QVERIFY(dir.isValid());
-        QFile source(dir.filePath(QStringLiteral("source.txt")));
+        QVERIFY(QDir(dir.path()).mkdir(QStringLiteral("a")));
+        QVERIFY(QDir(dir.path()).mkdir(QStringLiteral("b")));
+        QFile source(dir.filePath(QStringLiteral("a/source.txt")));
         QVERIFY(source.open(QIODevice::WriteOnly));
         source.write("source");
         source.close();
         MainWindow window;
-        window.openUrls({QUrl::fromLocalFile(dir.path())});
+        window.openUrls({QUrl::fromLocalFile(dir.filePath(QStringLiteral("a"))), QUrl::fromLocalFile(dir.filePath(QStringLiteral("b")))});
         window.show();
         FolderView *view = window.activePane()->view();
         QTRY_COMPARE(view->itemCount(), 1);
+        QCOMPARE(window.inactivePane()->url(), QUrl::fromLocalFile(dir.filePath(QStringLiteral("b"))));
         QAction *action = window.actionCollection()->action(QStringLiteral("create_symlink"));
         QVERIFY(action && !action->isEnabled());
         view->selectUrls({QUrl::fromLocalFile(source.fileName())});
         QTRY_VERIFY(action->isEnabled());
         QTimer::singleShot(0, [] {
-            auto *dialog = qobject_cast<QInputDialog *>(QApplication::activeModalWidget());
+            auto *dialog = qobject_cast<SymlinkDialog *>(QApplication::activeModalWidget());
             QVERIFY(dialog);
-            QCOMPARE(dialog->textValue(), QStringLiteral("source.txt - link"));
+            QCOMPARE(dialog->name(), QStringLiteral("source.txt - link"));
+            QVERIFY(dialog->findChild<QRadioButton *>(QStringLiteral("symlinkBesideTarget"))->isChecked());
             dialog->reject();
         });
         action->trigger();
         Settings::setSymlinkSuffix(QStringLiteral(".shortcut"));
         QTimer::singleShot(0, [] {
-            auto *dialog = qobject_cast<QInputDialog *>(QApplication::activeModalWidget());
+            auto *dialog = qobject_cast<SymlinkDialog *>(QApplication::activeModalWidget());
             QVERIFY(dialog);
-            QCOMPARE(dialog->textValue(), QStringLiteral("source.txt.shortcut"));
-            dialog->setTextValue(QStringLiteral("alias"));
+            auto *name = dialog->findChild<QLineEdit *>(QStringLiteral("symlinkName"));
+            QCOMPARE(name->text(), QStringLiteral("source.txt.shortcut"));
+            name->setText(QStringLiteral("alias"));
             dialog->accept();
         });
         action->trigger();
-        const QString link = dir.filePath(QStringLiteral("alias"));
+        const QString link = dir.filePath(QStringLiteral("a/alias"));
         QTRY_VERIFY(QFileInfo(link).isSymLink());
         QCOMPARE(QFileInfo(link).symLinkTarget(), source.fileName());
+
+        view->selectUrls({QUrl::fromLocalFile(source.fileName())});
+        QTRY_VERIFY(action->isEnabled());
+        QTimer::singleShot(0, [] {
+            auto *dialog = qobject_cast<SymlinkDialog *>(QApplication::activeModalWidget());
+            QVERIFY(dialog);
+            auto *other = dialog->findChild<QRadioButton *>(QStringLiteral("symlinkOtherPane"));
+            QVERIFY(other->isEnabled());
+            other->setChecked(true);
+            dialog->findChild<QCheckBox *>(QStringLiteral("symlinkRelative"))->setChecked(true);
+            dialog->findChild<QLineEdit *>(QStringLiteral("symlinkName"))->setText(QStringLiteral("relative"));
+            dialog->accept();
+        });
+        action->trigger();
+        const QString relative = dir.filePath(QStringLiteral("b/relative"));
+        QTRY_VERIFY(QFileInfo(relative).isSymLink());
+        QCOMPARE(QFileInfo(relative).readSymLink(), QStringLiteral("../a/source.txt"));
+        QCOMPARE(QFileInfo(relative).canonicalFilePath(), QFileInfo(source.fileName()).canonicalFilePath());
     }
 
     void exportsFilteredListingInColumnOrder()

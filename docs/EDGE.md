@@ -296,6 +296,14 @@ tests and caveats.
     layouts, long translations and keyboard-only navigation.
   - **Verify:** Focus, labels, both panes and essential actions remain usable
     without discarding customized layouts.
+  - **Note:** The file-list minimap counts every shown item, including the
+    children of expanded folders, so a large listing in a short window merges
+    several items into each pixel row rather than skipping any. In compact
+    view it follows the horizontal scrollbar, so the top and bottom of the
+    minimap reach the first and last columns.
+    [Band tests](../tests/minimapbandstest.cpp) and the
+    [main window tests](../tests/mainwindowtest.cpp) cover these; check its
+    appearance at high DPI and with Plasma's styles manually.
 - **Terminal availability and lifecycle** · [#524][issue-524]
   - **Exercise:** Test a missing Konsole component, unavailable local folders
     and remote locations; hide, reopen and move the terminal while sessions
@@ -318,6 +326,7 @@ tests and caveats.
 
 **References:** [terminal panel](../src/app/terminalpanel.cpp),
 [terminal tests](../tests/terminalpaneltest.cpp),
+[file-list minimap](../src/app/filelistminimap.cpp),
 [date tests](../tests/localizeddatestest.cpp) and
 [translation caveats](CAVEATS.md#translation-format-overrides).
 

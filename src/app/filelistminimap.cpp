@@ -8,9 +8,11 @@
 
 #include <QAbstractItemModel>
 #include <QAbstractItemView>
+#include <QListView>
 #include <QMouseEvent>
 #include <QPainter>
 #include <QScrollBar>
+#include <QTreeView>
 #include <QWheelEvent>
 
 namespace
@@ -19,7 +21,45 @@ constexpr int DefaultMinimapWidth = 14;
 constexpr int MinimumMinimapWidth = 8;
 constexpr int MaximumMinimapWidth = 64;
 constexpr int MinimumViewportHeight = 8;
-constexpr int MaximumSamples = 512;
+
+Qt::Orientation scrollOrientation(const QAbstractItemView *view)
+{
+    const auto *list = qobject_cast<const QListView *>(view);
+    if (!list) {
+        return Qt::Vertical;
+    }
+    // Items flow along one axis and, when wrapping, scroll along the other.
+    const bool topToBottom = list->flow() == QListView::TopToBottom;
+    return topToBottom == list->isWrapping() ? Qt::Horizontal : Qt::Vertical;
+}
+
+QColor blend(const MinimapBands::Band &band, const QPalette &palette)
+{
+    struct Share {
+        QColor color;
+        int count;
+    };
+    QColor folder = palette.color(QPalette::Highlight);
+    folder.setAlpha(200);
+    QColor file = palette.color(QPalette::Text);
+    file.setAlpha(110);
+    QColor unknown = palette.color(QPalette::Mid);
+    unknown.setAlpha(110);
+    const Share shares[] = {{folder, band.folders}, {file, band.files}, {unknown, band.unknown}};
+    const int total = band.total();
+    float red = 0;
+    float green = 0;
+    float blue = 0;
+    float alpha = 0;
+    for (const Share &share : shares) {
+        const float weight = float(share.count) / float(total);
+        red += share.color.redF() * weight;
+        green += share.color.greenF() * weight;
+        blue += share.color.blueF() * weight;
+        alpha += share.color.alphaF() * weight;
+    }
+    return QColor::fromRgbF(red, green, blue, alpha);
+}
 }
 
 FileListMinimap::FileListMinimap(QWidget *parent)
@@ -43,42 +83,84 @@ void FileListMinimap::setView(QAbstractItemView *view)
     if (m_view == view) {
         return;
     }
-    if (m_model) {
-        disconnect(m_model, nullptr, this, nullptr);
+    for (const QMetaObject::Connection &connection : std::as_const(m_viewConnections)) {
+        disconnect(connection);
     }
-    if (m_scrollBar) {
-        disconnect(m_scrollBar, nullptr, this, nullptr);
-    }
+    m_viewConnections.clear();
 
     m_view = view;
     m_model = view ? view->model() : nullptr;
-    m_scrollBar = view ? view->verticalScrollBar() : nullptr;
+    m_orientation = scrollOrientation(view);
+    m_scrollBar = view ? (m_orientation == Qt::Horizontal ? view->horizontalScrollBar() : view->verticalScrollBar()) : nullptr;
+    const auto invalidate = [this] {
+        invalidateItems();
+    };
     if (m_model) {
-        connect(m_model, &QAbstractItemModel::dataChanged, this, [this] {
-            update();
-        });
-        connect(m_model, &QAbstractItemModel::layoutChanged, this, [this] {
-            update();
-        });
-        connect(m_model, &QAbstractItemModel::modelReset, this, [this] {
-            update();
-        });
-        connect(m_model, &QAbstractItemModel::rowsInserted, this, [this] {
-            update();
-        });
-        connect(m_model, &QAbstractItemModel::rowsRemoved, this, [this] {
-            update();
-        });
+        m_viewConnections << connect(m_model, &QAbstractItemModel::dataChanged, this, invalidate)
+                          << connect(m_model, &QAbstractItemModel::layoutChanged, this, invalidate)
+                          << connect(m_model, &QAbstractItemModel::modelReset, this, invalidate)
+                          << connect(m_model, &QAbstractItemModel::rowsInserted, this, invalidate)
+                          << connect(m_model, &QAbstractItemModel::rowsRemoved, this, invalidate)
+                          << connect(m_model, &QAbstractItemModel::rowsMoved, this, invalidate);
+    }
+    if (auto *tree = qobject_cast<QTreeView *>(view)) {
+        m_viewConnections << connect(tree, &QTreeView::expanded, this, invalidate) << connect(tree, &QTreeView::collapsed, this, invalidate);
     }
     if (m_scrollBar) {
-        connect(m_scrollBar, &QScrollBar::valueChanged, this, [this] {
+        const auto repaint = [this] {
             update();
-        });
-        connect(m_scrollBar, &QScrollBar::rangeChanged, this, [this] {
-            update();
-        });
+        };
+        m_viewConnections << connect(m_scrollBar, &QScrollBar::valueChanged, this, repaint) << connect(m_scrollBar, &QScrollBar::rangeChanged, this, repaint);
     }
+    invalidateItems();
+}
+
+int FileListMinimap::itemCount() const
+{
+    ensureItems();
+    return int(m_items.size());
+}
+
+Qt::Orientation FileListMinimap::trackedOrientation() const
+{
+    return m_orientation;
+}
+
+void FileListMinimap::invalidateItems()
+{
+    m_itemsValid = false;
     update();
+}
+
+void FileListMinimap::ensureItems() const
+{
+    if (m_itemsValid) {
+        return;
+    }
+    m_items.clear();
+    if (m_model) {
+        collectItems(QModelIndex());
+    }
+    m_itemsValid = true;
+}
+
+void FileListMinimap::collectItems(const QModelIndex &parent) const
+{
+    const auto *tree = qobject_cast<const QTreeView *>(m_view);
+    const auto *list = qobject_cast<const QListView *>(m_view);
+    const int rows = m_model->rowCount(parent);
+    for (int row = 0; row < rows; ++row) {
+        if ((tree && tree->isRowHidden(row, parent)) || (list && list->isRowHidden(row))) {
+            continue;
+        }
+        const QModelIndex index = m_model->index(row, 0, parent);
+        const KFileItem item = index.data(KDirModel::FileItemRole).value<KFileItem>();
+        m_items.append(item.isNull() ? MinimapBands::ItemKind::Unknown : (item.isDir() ? MinimapBands::ItemKind::Folder : MinimapBands::ItemKind::File));
+        // Expanded folders in a tree view show their children inline.
+        if (tree && tree->isExpanded(index)) {
+            collectItems(index);
+        }
+    }
 }
 
 void FileListMinimap::paintEvent(QPaintEvent *)
@@ -87,19 +169,20 @@ void FileListMinimap::paintEvent(QPaintEvent *)
     const QColor background = palette().color(QPalette::AlternateBase);
     painter.fillRect(rect(), background);
 
-    if (m_model && height() > 0) {
-        const int rows = m_model->rowCount();
-        const int samples = qMin(rows, qMin(height(), MaximumSamples));
-        const int stripeHeight = qMax(1, height() / qMax(1, samples));
-        for (int sample = 0; sample < samples; ++sample) {
-            const int row = int(qint64(sample) * rows / samples);
-            const QModelIndex index = m_model->index(row, 0);
-            const KFileItem item = index.data(KDirModel::FileItemRole).value<KFileItem>();
-            QColor color = item.isNull() ? palette().color(QPalette::Mid) : palette().color(item.isDir() ? QPalette::Highlight : QPalette::Text);
-            color.setAlpha(item.isDir() ? 200 : 110);
-            const int y = sample * height() / samples;
-            painter.fillRect(QRect(2, y, width() - 4, stripeHeight), color);
+    ensureItems();
+    const QList<MinimapBands::Band> bands = MinimapBands::bands(m_items, height());
+    int runStart = 0;
+    QColor runColor;
+    for (int y = 0; y <= bands.size(); ++y) {
+        const QColor color = y < bands.size() && bands.at(y).total() > 0 ? blend(bands.at(y), palette()) : QColor();
+        if (y < bands.size() && color == runColor) {
+            continue;
         }
+        if (runColor.isValid()) {
+            painter.fillRect(QRect(2, runStart, width() - 4, y - runStart), runColor);
+        }
+        runStart = y;
+        runColor = color;
     }
 
     if (!m_scrollBar) {
@@ -169,7 +252,12 @@ void FileListMinimap::wheelEvent(QWheelEvent *event)
         event->ignore();
         return;
     }
-    const int delta = event->pixelDelta().y() != 0 ? event->pixelDelta().y() : event->angleDelta().y() * m_scrollBar->singleStep() / 120;
+    // A vertical wheel turn also steps through horizontally scrolling columns.
+    const QPoint pixels = event->pixelDelta();
+    const QPoint angle = event->angleDelta();
+    const int pixelDelta = pixels.y() != 0 ? pixels.y() : pixels.x();
+    const int angleDelta = angle.y() != 0 ? angle.y() : angle.x();
+    const int delta = pixelDelta != 0 ? pixelDelta : angleDelta * m_scrollBar->singleStep() / 120;
     m_scrollBar->setValue(m_scrollBar->value() - delta);
     event->accept();
 }

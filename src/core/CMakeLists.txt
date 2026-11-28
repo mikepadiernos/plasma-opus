@@ -137,6 +137,8 @@ add_library(opusfm_core STATIC
     metadataeditor.h
     metadataimport.cpp
     metadataimport.h
+    minimapbands.cpp
+    minimapbands.h
     density.cpp
     density.h
     doubleshift.cpp

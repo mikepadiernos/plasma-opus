@@ -695,8 +695,8 @@ app-owned settings and layouts.
       available. Bound rendering work for large or remote listings and do not
       read file contents or trigger additional remote downloads. [#334]
 
-**Caveats:** [File-list minimap](CAVEATS.md#file-list-minimap), tracked in
-[#434]; [settings backups](CAVEATS.md#settings-backups), tracked in [#433].
+**Caveats:** [Settings backups](CAVEATS.md#settings-backups), tracked in
+[#433].
 
 ### M12: UI Customization settings
 
@@ -765,8 +765,8 @@ Settings for M11 UI customizations, stored in KConfig.
         preview and confirmation, excluding recognized credentials and shared
         KDE settings [#199]
 
-**Caveats:** [File-list minimap](CAVEATS.md#file-list-minimap), tracked in
-[#434]; [settings backups](CAVEATS.md#settings-backups), tracked in [#433].
+**Caveats:** [Settings backups](CAVEATS.md#settings-backups), tracked in
+[#433].
 
 ### M13: Translations
 
@@ -3006,7 +3006,6 @@ the end of this file.
 [#431]: https://github.com/mikepadiernos/plasma-opus/issues/431
 [#432]: https://github.com/mikepadiernos/plasma-opus/issues/432
 [#433]: https://github.com/mikepadiernos/plasma-opus/issues/433
-[#434]: https://github.com/mikepadiernos/plasma-opus/issues/434
 [#436]: https://github.com/mikepadiernos/plasma-opus/issues/436
 [#437]: https://github.com/mikepadiernos/plasma-opus/issues/437
 [#440]: https://github.com/mikepadiernos/plasma-opus/issues/440

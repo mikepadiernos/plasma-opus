@@ -29,8 +29,7 @@ are in [reported bugs](BUGS.md), and untested scenarios in
   [folder metadata and listings](#folder-metadata-and-listings),
   [password-gated folders](#password-gated-folders),
   [previews and gallery](#previews-and-gallery), [editor](#editor),
-  [file-list minimap](#file-list-minimap), [Yazi mode](#yazi-mode),
-  [Yazi mode settings](#yazi-mode-settings)
+  [Yazi mode](#yazi-mode), [Yazi mode settings](#yazi-mode-settings)
 - **🔎 Search and operations:** [Search](#search),
   [batch rename](#batch-rename), [metadata editing](#metadata-editing),
   [transfer queue](#transfer-queue), [custom commands](#custom-commands),
@@ -463,22 +462,6 @@ these limits, each tracked in its own issue:
     editor panel before you need its undo history, and edit a file in only
     one place at a time.
     - Comment: [#755.7207460156][comment-755]
-
-## File-list minimap
-
-The file-list minimap has these limits
-([#434](https://github.com/mikepadiernos/plasma-opus/issues/434)):
-
-- **Sampling:** The minimap samples at most 512 top-level listing rows rather
-  than showing every item or expanded child row.
-- **Scrolling:** It tracks only the vertical scrollbar, so it cannot navigate
-  horizontally scrolling columns in compact view.
-
-- **Recommendation:** Use the ordinary scrollbar or keyboard navigation for
-  compact view and expanded folders, and treat the minimap as a sampled overview
-  rather than a complete list.
-  - Comment:
-    [#434.7040730100](https://github.com/mikepadiernos/plasma-opus/issues/434#issuecomment-7040730100)
 
 ## Yazi mode
 

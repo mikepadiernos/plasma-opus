@@ -16,6 +16,7 @@
 #include "favoritesmodel.h"
 #include "fieldeditdialog.h"
 #include "filediffdialog.h"
+#include "filelistminimap.h"
 #include "fileoperations.h"
 #include "filesplitdialog.h"
 #include "filetypeplaces.h"
@@ -4467,6 +4468,67 @@ private Q_SLOTS:
         Settings::setShowFileListMinimap(false);
         view.reloadListingSettings();
         QVERIFY(minimap->isHidden());
+    }
+
+    void fileListMinimapCoversExpandedFoldersAndCompactColumns()
+    {
+        QTemporaryDir root;
+        QVERIFY(root.isValid());
+        QVERIFY(QDir(root.path()).mkdir(QStringLiteral("sub")));
+        for (int i = 0; i < 30; ++i) {
+            QVERIFY(QDir(root.filePath(QStringLiteral("sub"))).mkdir(QStringLiteral("child-%1").arg(i, 3, 10, QLatin1Char('0'))));
+        }
+        for (int i = 0; i < 150; ++i) {
+            QFile file(root.filePath(QStringLiteral("file-%1.txt").arg(i, 3, 10, QLatin1Char('0'))));
+            QVERIFY(file.open(QIODevice::WriteOnly));
+        }
+
+        const bool previousVisible = Settings::showFileListMinimap();
+        const auto restoreSetting = qScopeGuard([previousVisible] {
+            Settings::setShowFileListMinimap(previousVisible);
+            Settings::self()->save();
+        });
+        Settings::setShowFileListMinimap(true);
+        Settings::self()->save();
+
+        FolderView view;
+        view.resize(460, 180);
+        view.setUrl(QUrl::fromLocalFile(root.path()));
+        view.show();
+        QTRY_COMPARE(view.itemCount(), 151);
+        auto *minimap = dynamic_cast<FileListMinimap *>(view.findChild<QWidget *>(QStringLiteral("fileListMinimap")));
+        QVERIFY(minimap);
+        QCOMPARE(minimap->trackedOrientation(), Qt::Vertical);
+        QCOMPARE(minimap->itemCount(), 151);
+
+        auto *details = qobject_cast<QTreeView *>(view.currentView());
+        QVERIFY(details);
+        QModelIndex sub;
+        for (int row = 0; row < details->model()->rowCount(); ++row) {
+            const QModelIndex index = details->model()->index(row, 0);
+            if (index.data(Qt::DisplayRole).toString() == QLatin1String("sub")) {
+                sub = index;
+            }
+        }
+        QVERIFY(sub.isValid());
+        details->expand(sub);
+        QTRY_COMPARE(minimap->itemCount(), 181);
+        const QImage expandedMap = minimap->grab().toImage();
+        details->collapse(sub);
+        QCOMPARE(minimap->itemCount(), 151);
+        QVERIFY(expandedMap != minimap->grab().toImage());
+
+        view.setViewMode(FolderView::ViewMode::Compact);
+        QCOMPARE(minimap->trackedOrientation(), Qt::Horizontal);
+        auto *columns = view.currentView()->horizontalScrollBar();
+        QTRY_VERIFY(columns->maximum() > 0);
+        QTest::mouseClick(minimap, Qt::LeftButton, Qt::NoModifier, QPoint(minimap->width() / 2, minimap->height() - 1));
+        QCOMPARE(columns->value(), columns->maximum());
+        QTest::mouseClick(minimap, Qt::LeftButton, Qt::NoModifier, QPoint(minimap->width() / 2, 0));
+        QCOMPARE(columns->value(), 0);
+
+        view.setViewMode(FolderView::ViewMode::Icons);
+        QCOMPARE(minimap->trackedOrientation(), Qt::Vertical);
     }
 
     void informationPanelFollowsSelectionAndOptionalHover()

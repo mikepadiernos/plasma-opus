@@ -71,7 +71,11 @@ preview. Both behaviours can be changed in Preferences.
 ### Manage files
 
 - **File operations:** KDE file actions, queued transfers, undo, batch rename,
-  duplicate finding and listing export.
+  duplicate finding and listing export. **File › Create Symbolic Link…** names
+  the link and places it beside its target, in the other pane's folder or in
+  another folder, with an absolute or relative target path. Links can also be
+  created on remote hosts whose KIO worker supports them, such as SFTP, when
+  the link and its target are on the same host.
 - **Archives and file tools:** browse and manage archives, including
   AES-encrypted ZIP creation and protected extraction. Create and verify
   SHA-256 checksum files, and split and combine files.

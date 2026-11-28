@@ -230,9 +230,9 @@ void FileOperations::rename(const KFileItemList &items, QWidget *window)
     dialog->show();
 }
 
-KJob *FileOperations::createSymlink(const QUrl &target, const QString &name, QString &error, QWidget *window)
+KJob *FileOperations::createSymlink(const QUrl &target, const QUrl &folder, const QString &name, bool relative, QString &error, QWidget *window)
 {
-    KIO::SimpleJob *job = Symlinks::create(target, name, error);
+    KIO::SimpleJob *job = Symlinks::create(target, folder, name, relative ? Symlinks::TargetForm::Relative : Symlinks::TargetForm::Absolute, error);
     if (job) {
         attachWindow(job, window);
     }

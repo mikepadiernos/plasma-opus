@@ -30,7 +30,7 @@ KJob *move(const QList<QUrl> &sources, const QUrl &destination, QWidget *window)
 KJob *trash(const QList<QUrl> &urls, QWidget *window);
 KJob *deletePermanently(const QList<QUrl> &urls, QWidget *window);
 void rename(const KFileItemList &items, QWidget *window);
-KJob *createSymlink(const QUrl &target, const QString &name, QString &error, QWidget *window);
+KJob *createSymlink(const QUrl &target, const QUrl &folder, const QString &name, bool relative, QString &error, QWidget *window);
 
 void copyToClipboard(const QList<QUrl> &urls, bool cut);
 /// Returns false when the clipboard holds nothing pasteable.

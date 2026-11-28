@@ -102,6 +102,8 @@
 #include "shortcutreference.h"
 #include "startup.h"
 #include "symbolicicon.h"
+#include "symlinkdialog.h"
+#include "symlinks.h"
 #include "tabcolors.h"
 #include "tabmodel.h"
 #include "tagassignment.h"
@@ -4701,7 +4703,7 @@ void MainWindow::updateActions()
         ->setEnabled(hasSelection && props.supportsMoving() && std::all_of(selected.cbegin(), selected.cend(), [](const KFileItem &item) {
                          return item.url().isLocalFile();
                      }));
-    actions->action(QStringLiteral("create_symlink"))->setEnabled(selected.size() == 1 && selected.first().url().isLocalFile());
+    actions->action(QStringLiteral("create_symlink"))->setEnabled(selected.size() == 1 && Symlinks::supportsLinking(selected.first().mostLocalUrl()));
     actions->action(QStringLiteral("move_to_trash"))->setEnabled(hasSelection && props.supportsDeleting() && props.isLocal());
     actions->action(QStringLiteral("delete"))->setEnabled(hasSelection && props.supportsDeleting());
     actions->action(stdName(KStandardAction::Cut))->setEnabled(hasSelection && props.supportsMoving());
@@ -6120,25 +6122,22 @@ void MainWindow::compareFiles()
 void MainWindow::createSymlink()
 {
     const KFileItemList items = activePane()->view()->selectedItems();
-    if (items.size() != 1 || !items.first().url().isLocalFile()) {
-        KMessageBox::error(this, i18nc("@info", "Select one local file or folder."));
+    const QUrl target = items.size() == 1 ? items.first().mostLocalUrl() : QUrl();
+    if (!Symlinks::supportsLinking(target)) {
+        KMessageBox::error(this, i18nc("@info", "Select one file or folder in a location that supports symbolic links."));
         return;
     }
-    const KFileItem item = items.first();
-    bool accepted = false;
-    const QString suffix = Settings::symlinkSuffix();
-    const QString name =
-        QInputDialog::getText(this,
-                              i18nc("@title:window", "Create Symbolic Link"),
-                              i18nc("@label:textbox", "Link name:"),
-                              QLineEdit::Normal,
-                              suffix.isEmpty() ? i18nc("@item:intext default symbolic link name", "%1 - link", item.name()) : item.name() + suffix,
-                              &accepted);
-    if (!accepted) {
+    QUrl otherFolder;
+    if (isDualLayout() && !inactivePane()->isHidden()) {
+        const KFileItem root = inactivePane()->view()->rootItem();
+        otherFolder = root.isNull() ? inactivePane()->url() : root.mostLocalUrl();
+    }
+    SymlinkDialog dialog(target, items.first().name(), otherFolder, this);
+    if (dialog.exec() != QDialog::Accepted) {
         return;
     }
     QString error;
-    if (!FileOperations::createSymlink(item.url(), name, error, this)) {
+    if (!FileOperations::createSymlink(target, dialog.folder(), dialog.name(), dialog.isRelative(), error, this)) {
         KMessageBox::error(this, error);
     }
 }

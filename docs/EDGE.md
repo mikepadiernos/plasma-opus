@@ -76,6 +76,19 @@ tests and caveats.
     destination.
   - **Verify:** Each conflict policy, and that the operation reports what
     actually happened.
+  - **Note:** **Create Symbolic Link** refuses a name that already exists in
+    the chosen folder, including a dangling link, and never replaces an item
+    that appears after the dialog closes. It refuses links between local and
+    remote locations, between hosts and in locations whose KIO worker can't
+    create links. Relative targets are computed from the resolved local
+    folders, so they work through linked folders. On a remote host they are
+    computed from the paths as shown, so a remote folder reached through a
+    link on the server can make a relative link point elsewhere; absolute
+    targets, the default, are unaffected.
+    [Symbolic-link tests](../tests/symlinkstest.cpp) and
+    [dialog tests](../tests/symlinkdialogtest.cpp) cover these; remote links
+    are only planned against the SFTP worker, so check creation on a test SFTP
+    server manually.
 - **Partial queued work** · [#499][issue-499]
   - **Exercise:** Cancel a waiting, paused or running transfer, or disconnect a
     test destination mid-copy.
@@ -94,6 +107,7 @@ tests and caveats.
 
 **References:** [file operations](../src/app/fileoperations.cpp),
 [transfer queue](../src/core/transferqueue.cpp),
+[symbolic links](../src/core/symlinks.cpp),
 [queue tests](../tests/transferqueuetest.cpp) and
 [transfer caveats](CAVEATS.md#transfer-queue).
 

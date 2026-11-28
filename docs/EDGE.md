@@ -211,9 +211,13 @@ tests and caveats.
 - **Metadata limits and concurrent edits** · [#517][issue-517]
   - **Exercise:** Use malformed or oversized `.mfm.json`, unknown fields and
     simultaneous changes from another process.
-  - **Verify:** Errors are reported.
-  - **Note:** Review the existing warning that unsupported metadata may be
-    discarded before testing writes.
+  - **Verify:** Errors are reported. Edits keep unknown keys, entries and
+    format fields, and an edit that would exceed 4,096 bytes or replace an
+    unsupported value is refused with the file unchanged. Key order and
+    whitespace are not kept.
+  - **Note:** [Folder metadata tests](../tests/foldermetadatatest.cpp)
+    cover preserved data, refused writes, the size limit and validated reads;
+    simultaneous changes from another process remain manual.
 - **Media and optional tools** · [#518][issue-518]
   - **Exercise:** Test stale metadata previews, linked files, unsupported
     formats and missing, failing or incompatible ExifTool and image codecs.
@@ -222,6 +226,7 @@ tests and caveats.
 **References:** [preview](../src/core/previewcontent.cpp),
 [editor](../src/app/editorpanel.cpp),
 [folder metadata](../src/core/foldermetadata.cpp),
+[folder metadata tests](../tests/foldermetadatatest.cpp),
 [media metadata](../src/core/metadataeditor.cpp),
 [preview tests](../tests/previewcontenttest.cpp) and
 [metadata tests](../tests/metadataeditortest.cpp).

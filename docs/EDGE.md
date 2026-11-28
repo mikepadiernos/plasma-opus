@@ -81,7 +81,10 @@ tests and caveats.
     that appears after the dialog closes. It refuses links between local and
     remote locations, between hosts and in locations whose KIO worker can't
     create links. Relative targets are computed from the resolved local
-    folders, so they work through linked folders.
+    folders, so they work through linked folders. On a remote host they are
+    computed from the paths as shown, so a remote folder reached through a
+    link on the server can make a relative link point elsewhere; absolute
+    targets, the default, are unaffected.
     [Symbolic-link tests](../tests/symlinkstest.cpp) and
     [dialog tests](../tests/symlinkdialogtest.cpp) cover these; remote links
     are only planned against the SFTP worker, so check creation on a test SFTP

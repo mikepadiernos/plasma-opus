@@ -138,6 +138,7 @@ ecm_add_tests(
     edittoolstest.cpp
     executablestest.cpp
     filemanagerrequesttest.cpp
+    filepublishtest.cpp
     imageeditingtest.cpp
     imageconversiontest.cpp
     imagedetailstest.cpp

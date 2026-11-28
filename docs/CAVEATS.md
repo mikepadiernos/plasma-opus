@@ -34,8 +34,8 @@ are in [reported bugs](BUGS.md), and untested scenarios in
 - **🔎 Search and operations:** [Search](#search),
   [batch rename](#batch-rename), [metadata editing](#metadata-editing),
   [transfer queue](#transfer-queue), [custom commands](#custom-commands),
-  [symbolic links](#symbolic-links), [listing export](#listing-export),
-  [checksums](#checksum-files), [split and combine](#split-and-combine-files),
+  [listing export](#listing-export), [checksums](#checksum-files),
+  [split and combine](#split-and-combine-files),
   [native tagging](#native-tagging), [tagging settings](#tagging-settings)
 - **🔀 Comparison and analysis:**
   [Filtered folder comparison](#filtered-folder-comparison),
@@ -975,23 +975,6 @@ Custom commands have these limits
 - **Alternative:** Use a reviewed script instead of a complex inline template.
   - Comment:
     [#373.7029676403](https://github.com/mikepadiernos/plasma-opus/issues/373#issuecomment-7029676403)
-
-## Symbolic links
-
-Symbolic-link creation has these limits ([#312][issue-312]):
-
-- **Targets:** Only existing local files and folders are supported.
-- **Destination:** The new link is created beside its target; another
-  destination cannot be chosen.
-
-- **Recommendation:** Use a suitable external tool when a different link
-  destination or remote symbolic-link support is needed. For local paths, GNU
-  `ln -s` can create a link at a chosen destination; remote support depends on
-  the server and access method.
-  - Comment: [#312.7021756400][comment-312]
-- **Alternative:** Use an SFTP client with explicit symbolic-link support.
-  - Comment:
-    [#312.7029672139](https://github.com/mikepadiernos/plasma-opus/issues/312#issuecomment-7029672139)
 
 ## Listing export
 
@@ -4654,7 +4637,6 @@ dependency and varies with the chosen output method.
 [issue-307]: https://github.com/mikepadiernos/plasma-opus/issues/307
 [issue-309]: https://github.com/mikepadiernos/plasma-opus/issues/309
 [issue-311]: https://github.com/mikepadiernos/plasma-opus/issues/311
-[issue-312]: https://github.com/mikepadiernos/plasma-opus/issues/312
 [issue-313]: https://github.com/mikepadiernos/plasma-opus/issues/313
 [issue-732]: https://github.com/mikepadiernos/plasma-opus/issues/732
 [issue-755]: https://github.com/mikepadiernos/plasma-opus/issues/755
@@ -4674,7 +4656,6 @@ dependency and varies with the chosen output method.
 [comment-307]: https://github.com/mikepadiernos/plasma-opus/issues/307#issuecomment-7021754467
 [comment-309]: https://github.com/mikepadiernos/plasma-opus/issues/309#issuecomment-7021755164
 [comment-311]: https://github.com/mikepadiernos/plasma-opus/issues/311#issuecomment-7021755780
-[comment-312]: https://github.com/mikepadiernos/plasma-opus/issues/312#issuecomment-7021756400
 [comment-313]: https://github.com/mikepadiernos/plasma-opus/issues/313#issuecomment-7021757012
 [comment-314]: https://github.com/mikepadiernos/plasma-opus/issues/314#issuecomment-7021757620
 [comment-315]: https://github.com/mikepadiernos/plasma-opus/issues/315#issuecomment-7021758275

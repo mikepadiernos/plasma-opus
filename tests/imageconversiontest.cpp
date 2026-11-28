@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 #include "imageconversion.h"
+#include "filepublish.h"
 #include "umaskfixture.h"
 
 #include <QDir>
@@ -12,6 +13,7 @@
 #include <QTemporaryDir>
 #include <QTest>
 
+#include <cerrno>
 #include <unistd.h>
 
 class ImageConversionTest : public QObject
@@ -22,6 +24,66 @@ private Q_SLOTS:
     void initTestCase()
     {
         QStandardPaths::setTestModeEnabled(true);
+    }
+
+    void init()
+    {
+        FilePublish::Testing::setSyscalls({});
+    }
+
+    void cleanup()
+    {
+        FilePublish::Testing::setSyscalls({});
+    }
+
+    void fallbacksPublishWithoutOverwriting_data()
+    {
+        QTest::addColumn<bool>("linksSupported");
+        QTest::newRow("link") << true;
+        QTest::newRow("copy") << false;
+    }
+
+    void fallbacksPublishWithoutOverwriting()
+    {
+        QFETCH(bool, linksSupported);
+        const ScopedUmask scoped(022);
+        FilePublish::Testing::Syscalls hooks;
+        hooks.rename = [](const char *, const char *) {
+            errno = EINVAL;
+            return -1;
+        };
+        if (!linksSupported) {
+            hooks.link = [](const char *, const char *) {
+                errno = EPERM;
+                return -1;
+            };
+        }
+        FilePublish::Testing::setSyscalls(hooks);
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        QVERIFY(QDir().mkdir(dir.filePath(QStringLiteral("out"))));
+        QImage image(40, 20, QImage::Format_RGB32);
+        image.fill(Qt::green);
+        const QString first = dir.filePath(QStringLiteral("first.png"));
+        const QString second = dir.filePath(QStringLiteral("second.png"));
+        QVERIFY(image.save(first));
+        QVERIFY(image.save(second));
+        const QString out = dir.filePath(QStringLiteral("out"));
+        const auto plan = ImageConversion::plan({QUrl::fromLocalFile(first), QUrl::fromLocalFile(second)}, out, "png");
+        QVERIFY2(plan.error.isEmpty(), qPrintable(plan.error));
+
+        QFile raced(plan.entries.at(0).destination);
+        QVERIFY(raced.open(QIODevice::WriteOnly | QIODevice::NewOnly));
+        QCOMPARE(raced.write("raced"), 5);
+        raced.close();
+        const auto failures = ImageConversion::convert(plan.entries, "png", QSize(10, 10), 90);
+        QCOMPARE(failures.size(), 1);
+        QCOMPARE(failures.first().entry.destination, plan.entries.at(0).destination);
+        QVERIFY(raced.open(QIODevice::ReadOnly));
+        QCOMPARE(raced.readAll(), QByteArray("raced"));
+        QCOMPARE(QImageReader(plan.entries.at(1).destination).size(), QSize(10, 5));
+        QCOMPARE(fileMode(plan.entries.at(1).destination), 0644);
+        QCOMPARE(QDir(out).entryList(QDir::Files | QDir::Hidden), (QStringList{QStringLiteral("first.png"), QStringLiteral("second.png")}));
     }
 
     void uniquePreviewAndRaceDoNotOverwrite()

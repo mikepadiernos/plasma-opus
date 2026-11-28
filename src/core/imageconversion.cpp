@@ -9,17 +9,10 @@
 #include <KLocalizedString>
 
 #include <QDir>
-#include <QFile>
 #include <QFileInfo>
 #include <QImageWriter>
 #include <QSet>
 #include <QTemporaryFile>
-
-#include <cerrno>
-#include <cstring>
-#include <fcntl.h>
-#include <linux/fs.h>
-#include <stdio.h>
 
 ImageConversion::Plan ImageConversion::plan(const QList<QUrl> &sources, const QString &directory, const QByteArray &format)
 {
@@ -96,11 +89,9 @@ QList<ImageConversion::Failure> ImageConversion::convert(const QList<Entry> &ent
             failures.append({entry, error});
             continue;
         }
-        temporary.close();
-        const QByteArray from = QFile::encodeName(temporary.fileName());
-        const QByteArray to = QFile::encodeName(entry.destination);
-        if (::renameat2(AT_FDCWD, from.constData(), AT_FDCWD, to.constData(), RENAME_NOREPLACE) != 0) {
-            failures.append({entry, QString::fromLocal8Bit(std::strerror(errno))});
+        const FilePublish::Publication published = FilePublish::publishNoReplace(temporary.handle(), temporary.fileName(), entry.destination);
+        if (!published.error.isEmpty()) {
+            failures.append({entry, published.error});
         } else {
             temporary.setAutoRemove(false);
         }

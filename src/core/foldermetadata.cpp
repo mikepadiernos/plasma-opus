@@ -2,6 +2,8 @@
 
 #include "foldermetadata.h"
 
+#include <KLocalizedString>
+
 #include <QDir>
 #include <QFile>
 #include <QJsonArray>
@@ -9,8 +11,10 @@
 #include <QJsonParseError>
 #include <QRegularExpression>
 #include <QSaveFile>
+#include <QSet>
 
 #include <functional>
+#include <optional>
 #include <utility>
 
 namespace
@@ -58,33 +62,107 @@ bool validColor(const QString &color)
     return expression.match(color).hasMatch();
 }
 
-QJsonObject readObject(const QString &folder, QString *error)
+/// Reads the unvalidated object; std::nullopt when the file exists but can't be used.
+std::optional<QJsonObject> readObject(const QString &folder, QString *error)
 {
     QFile file(metadataPath(folder));
     if (!file.exists()) {
-        return {};
+        return QJsonObject();
     }
     if (!file.open(QIODevice::ReadOnly)) {
         if (error) {
             *error = file.errorString();
         }
-        return {};
+        return std::nullopt;
     }
     if (file.size() > MaxMetadataBytes) {
         if (error) {
             *error = QStringLiteral("Metadata file exceeds 4096 bytes");
         }
-        return {};
+        return std::nullopt;
     }
     QJsonParseError parseError;
     const QJsonDocument document = QJsonDocument::fromJson(file.readAll(), &parseError);
     if (parseError.error != QJsonParseError::NoError || !document.isObject()) {
         if (error) {
-            *error = parseError.errorString();
+            *error = parseError.error != QJsonParseError::NoError ? parseError.errorString() : QStringLiteral("Metadata file is not a JSON object");
         }
-        return {};
+        return std::nullopt;
     }
     return document.object();
+}
+
+bool isAbsent(const QJsonValue &value)
+{
+    return value.isUndefined() || value.isNull();
+}
+
+QString unsupportedValue(const QString &folder, const QString &key)
+{
+    return i18nc("@info %1 is a metadata file path, %2 a metadata key",
+                 "%1 has a “%2” value that Plasma Opus does not support, and saving would discard it",
+                 metadataPath(folder),
+                 key);
+}
+
+QString unsupportedEntry(const QString &folder, const QString &key, const QString &name)
+{
+    return i18nc("@info %1 is a metadata file path, %2 a metadata key, %3 a file name",
+                 "%1 has a “%2” value for “%3” that Plasma Opus does not support, and saving would discard it",
+                 metadataPath(folder),
+                 key,
+                 name);
+}
+
+QString unsafeName(const QString &folder, const QString &key)
+{
+    return i18nc("@info %1 is a metadata file path, %2 a metadata key",
+                 "%1 has an unsafe file name under “%2”, and saving would discard it",
+                 metadataPath(folder),
+                 key);
+}
+
+bool supportedLabel(const QJsonValue &value)
+{
+    return AllowedLabels.contains(value.toString());
+}
+
+bool supportedColor(const QJsonValue &value)
+{
+    return validColor(value.toString());
+}
+
+bool supportedRating(const QJsonValue &value)
+{
+    const int rating = value.toInt(0);
+    return rating >= 1 && rating <= 5;
+}
+
+bool supportedNote(const QJsonValue &value)
+{
+    return value.isString() && value.toString().trimmed().size() <= 500;
+}
+
+/// Whether setFormat() can rewrite the known fields of @p value without discarding anything.
+bool supportedFormat(const QJsonValue &value)
+{
+    FolderMetadata::Format parsed;
+    if (!value.isObject() || !FolderMetadata::format(QJsonObject{{QStringLiteral("format"), value}}, &parsed)) {
+        return false;
+    }
+    const QJsonObject object = value.toObject();
+    const QJsonValue columns = object.value(QStringLiteral("columns"));
+    const QJsonValue sortKey = object.value(QStringLiteral("sortKey"));
+    if ((!isAbsent(columns) && !columns.isArray()) || (!isAbsent(sortKey) && !sortKey.isString())) {
+        return false;
+    }
+    for (const QString &key : {QStringLiteral("sortAsc"), QStringLiteral("includeDescendants"), QStringLiteral("calculateFolderSizes")}) {
+        const QJsonValue flag = object.value(key);
+        if (!isAbsent(flag) && !flag.isBool()) {
+            return false;
+        }
+    }
+    return true;
 }
 
 QJsonObject sanitized(const QJsonObject &input)
@@ -171,35 +249,84 @@ QJsonObject sanitized(const QJsonObject &input)
     return output;
 }
 
-bool mutate(const QString &folder, const std::function<void(QJsonObject &)> &mutation, QString *error)
+/// Atomically writes @p metadata as it is, deleting .mfm.json when the object is empty.
+bool writeObject(const QString &folder, const QJsonObject &metadata, QString &error)
 {
-    if (error) {
-        error->clear();
+    const QString path = metadataPath(folder);
+    if (metadata.isEmpty()) {
+        if (QFile::exists(path) && !QFile::remove(path)) {
+            error = QStringLiteral("Could not remove %1").arg(path);
+            return false;
+        }
+        return true;
     }
-    QJsonObject metadata = readObject(folder, error);
-    if (error && !error->isEmpty()) {
+    const QByteArray bytes = QJsonDocument(metadata).toJson(QJsonDocument::Compact);
+    if (bytes.size() > MaxMetadataBytes) {
+        error = i18nc("@info %1 is a metadata file path", "%1 would exceed the 4,096-byte limit for folder metadata", path);
         return false;
     }
-    mutation(metadata);
-    if (error && !error->isEmpty()) {
+    QSaveFile file(path);
+    if (!file.open(QIODevice::WriteOnly) || file.write(bytes) != bytes.size() || !file.commit()) {
+        error = file.errorString();
         return false;
     }
-    return FolderMetadata::write(folder, metadata, error);
+    return true;
 }
 
-void setMapValue(QJsonObject &metadata, const QString &mapName, const QString &name, const QString &value)
+/**
+ * Applies @p mutation to the metadata read just before writing. The mutation
+ * changes only the value it targets, so keys and entries Plasma Opus doesn't
+ * know are written back as they are; it returns false with @p error to refuse
+ * an edit that would discard data, and the file is then left unchanged.
+ */
+bool mutate(const QString &folder, const std::function<bool(QJsonObject &, QString &)> &mutation, QString *error)
 {
-    QJsonObject values = metadata.value(mapName).toObject();
-    if (value.isEmpty()) {
+    QString localError;
+    std::optional<QJsonObject> metadata = readObject(folder, &localError);
+    const bool written = metadata && mutation(*metadata, localError) && writeObject(folder, *metadata, localError);
+    if (error) {
+        *error = written ? QString() : localError;
+    }
+    return written;
+}
+
+/// Sets or, when @p value is null, removes the @p name entry of the @p key map.
+bool setMapValue(const QString &folder,
+                 QJsonObject &metadata,
+                 const QString &key,
+                 const QString &name,
+                 const QJsonValue &value,
+                 bool (*supported)(const QJsonValue &),
+                 QString &error)
+{
+    const QJsonValue existing = metadata.value(key);
+    if (!isAbsent(existing) && !existing.isObject()) {
+        error = unsupportedValue(folder, key);
+        return false;
+    }
+    QJsonObject values = existing.toObject();
+    for (auto it = values.constBegin(); it != values.constEnd(); ++it) {
+        if (!validName(it.key())) {
+            error = unsafeName(folder, key);
+            return false;
+        }
+    }
+    const QJsonValue current = values.value(name);
+    if (!isAbsent(current) && !supported(current)) {
+        error = unsupportedEntry(folder, key, name);
+        return false;
+    }
+    if (isAbsent(value)) {
         values.remove(name);
     } else {
         values.insert(name, value);
     }
     if (values.isEmpty()) {
-        metadata.remove(mapName);
+        metadata.remove(key);
     } else {
-        metadata.insert(mapName, values);
+        metadata.insert(key, values);
     }
+    return true;
 }
 }
 
@@ -208,49 +335,7 @@ QJsonObject FolderMetadata::read(const QString &folder, QString *error)
     if (error) {
         error->clear();
     }
-    return sanitized(readObject(folder, error));
-}
-
-bool FolderMetadata::write(const QString &folder, const QJsonObject &metadata, QString *error)
-{
-    if (error) {
-        error->clear();
-    }
-    const QJsonObject clean = sanitized(metadata);
-    const QString path = metadataPath(folder);
-    if (clean.isEmpty()) {
-        if (!QFile::exists(path)) {
-            return true;
-        }
-        if (!QFile::remove(path)) {
-            if (error) {
-                *error = QStringLiteral("Could not remove %1").arg(path);
-            }
-            return false;
-        }
-        return true;
-    }
-    const QByteArray bytes = QJsonDocument(clean).toJson(QJsonDocument::Compact);
-    if (bytes.size() > MaxMetadataBytes) {
-        if (error) {
-            *error = QStringLiteral("Metadata file exceeds 4096 bytes");
-        }
-        return false;
-    }
-    QSaveFile file(path);
-    if (!file.open(QIODevice::WriteOnly)) {
-        if (error) {
-            *error = file.errorString();
-        }
-        return false;
-    }
-    if (file.write(bytes) != bytes.size() || !file.commit()) {
-        if (error) {
-            *error = file.errorString();
-        }
-        return false;
-    }
-    return true;
+    return sanitized(readObject(folder, error).value_or(QJsonObject()));
 }
 
 bool FolderMetadata::setLabel(const QString &folder, const QString &name, const QString &label, QString *error)
@@ -263,8 +348,9 @@ bool FolderMetadata::setLabel(const QString &folder, const QString &name, const 
     }
     return mutate(
         folder,
-        [&name, &label](QJsonObject &metadata) {
-            setMapValue(metadata, QStringLiteral("labels"), name, label);
+        [&folder, &name, &label](QJsonObject &metadata, QString &reason) {
+            const QJsonValue value = label.isEmpty() ? QJsonValue() : QJsonValue(label);
+            return setMapValue(folder, metadata, QStringLiteral("labels"), name, value, supportedLabel, reason);
         },
         error);
 }
@@ -279,8 +365,9 @@ bool FolderMetadata::setColor(const QString &folder, const QString &name, const 
     }
     return mutate(
         folder,
-        [&name, &color](QJsonObject &metadata) {
-            setMapValue(metadata, QStringLiteral("colors"), name, color);
+        [&folder, &name, &color](QJsonObject &metadata, QString &reason) {
+            const QJsonValue value = color.isEmpty() ? QJsonValue() : QJsonValue(color);
+            return setMapValue(folder, metadata, QStringLiteral("colors"), name, value, supportedColor, reason);
         },
         error);
 }
@@ -295,18 +382,9 @@ bool FolderMetadata::setRating(const QString &folder, const QString &name, int r
     }
     return mutate(
         folder,
-        [&name, rating](QJsonObject &metadata) {
-            QJsonObject ratings = metadata.value(QStringLiteral("ratings")).toObject();
-            if (rating == 0) {
-                ratings.remove(name);
-            } else {
-                ratings.insert(name, rating);
-            }
-            if (ratings.isEmpty()) {
-                metadata.remove(QStringLiteral("ratings"));
-            } else {
-                metadata.insert(QStringLiteral("ratings"), ratings);
-            }
+        [&folder, &name, rating](QJsonObject &metadata, QString &reason) {
+            const QJsonValue value = rating == 0 ? QJsonValue() : QJsonValue(rating);
+            return setMapValue(folder, metadata, QStringLiteral("ratings"), name, value, supportedRating, reason);
         },
         error);
 }
@@ -322,8 +400,9 @@ bool FolderMetadata::setNote(const QString &folder, const QString &name, const Q
     }
     return mutate(
         folder,
-        [&name, &trimmed](QJsonObject &metadata) {
-            setMapValue(metadata, QStringLiteral("notes"), name, trimmed);
+        [&folder, &name, &trimmed](QJsonObject &metadata, QString &reason) {
+            const QJsonValue value = trimmed.isEmpty() ? QJsonValue() : QJsonValue(trimmed);
+            return setMapValue(folder, metadata, QStringLiteral("notes"), name, value, supportedNote, reason);
         },
         error);
 }
@@ -338,28 +417,44 @@ bool FolderMetadata::togglePin(const QString &folder, const QString &name, QStri
     }
     return mutate(
         folder,
-        [&name, error](QJsonObject &metadata) {
-            QJsonArray pins = metadata.value(QStringLiteral("pins")).toArray();
-            int index = -1;
-            for (qsizetype i = 0; i < pins.size(); ++i) {
-                if (pins.at(i).toString() == name) {
-                    index = static_cast<int>(i);
-                    break;
-                }
+        [&folder, &name](QJsonObject &metadata, QString &reason) {
+            const QString key = QStringLiteral("pins");
+            const QJsonValue existing = metadata.value(key);
+            if (!isAbsent(existing) && !existing.isArray()) {
+                reason = unsupportedValue(folder, key);
+                return false;
             }
-            if (index >= 0) {
-                pins.removeAt(index);
-            } else if (pins.size() < 200) {
+            QJsonArray pins = existing.toArray();
+            QSet<QString> pinned;
+            for (const QJsonValue &pin : std::as_const(pins)) {
+                if (!pin.isString()) {
+                    reason = unsupportedValue(folder, key);
+                    return false;
+                }
+                if (!validName(pin.toString())) {
+                    reason = unsafeName(folder, key);
+                    return false;
+                }
+                pinned.insert(pin.toString());
+            }
+            if (pinned.contains(name)) {
+                for (qsizetype i = pins.size() - 1; i >= 0; --i) {
+                    if (pins.at(i).toString() == name) {
+                        pins.removeAt(i);
+                    }
+                }
+            } else if (pinned.size() < 200) {
                 pins.append(name);
-            } else if (error) {
-                *error = QStringLiteral("A folder can have at most 200 pinned items");
-                return;
+            } else {
+                reason = QStringLiteral("A folder can have at most 200 pinned items");
+                return false;
             }
             if (pins.isEmpty()) {
-                metadata.remove(QStringLiteral("pins"));
+                metadata.remove(key);
             } else {
-                metadata.insert(QStringLiteral("pins"), pins);
+                metadata.insert(key, pins);
             }
+            return true;
         },
         error);
 }
@@ -374,12 +469,19 @@ bool FolderMetadata::setFolderColor(const QString &folder, const QString &color,
     }
     return mutate(
         folder,
-        [&color](QJsonObject &metadata) {
-            if (color.isEmpty()) {
-                metadata.remove(QStringLiteral("color"));
-            } else {
-                metadata.insert(QStringLiteral("color"), color);
+        [&folder, &color](QJsonObject &metadata, QString &reason) {
+            const QString key = QStringLiteral("color");
+            const QJsonValue existing = metadata.value(key);
+            if (!isAbsent(existing) && !supportedColor(existing)) {
+                reason = unsupportedValue(folder, key);
+                return false;
             }
+            if (color.isEmpty()) {
+                metadata.remove(key);
+            } else {
+                metadata.insert(key, color);
+            }
+            return true;
         },
         error);
 }
@@ -388,12 +490,19 @@ bool FolderMetadata::setHidden(const QString &folder, bool hiddenValue, QString 
 {
     return mutate(
         folder,
-        [hiddenValue](QJsonObject &metadata) {
-            if (hiddenValue) {
-                metadata.insert(QStringLiteral("hidden"), true);
-            } else {
-                metadata.remove(QStringLiteral("hidden"));
+        [&folder, hiddenValue](QJsonObject &metadata, QString &reason) {
+            const QString key = QStringLiteral("hidden");
+            const QJsonValue existing = metadata.value(key);
+            if (!isAbsent(existing) && !existing.isBool()) {
+                reason = unsupportedValue(folder, key);
+                return false;
             }
+            if (hiddenValue) {
+                metadata.insert(key, true);
+            } else {
+                metadata.remove(key);
+            }
+            return true;
         },
         error);
 }
@@ -419,20 +528,36 @@ bool FolderMetadata::setFormat(const QString &folder, const Format &formatValue,
             return false;
         }
     }
-    QJsonObject formatObject;
-    formatObject.insert(QStringLiteral("view"), formatValue.view);
-    formatObject.insert(QStringLiteral("columns"), QJsonArray::fromStringList(formatValue.columns));
-    formatObject.insert(QStringLiteral("sortKey"), formatValue.sortKey.left(19));
-    formatObject.insert(QStringLiteral("sortAsc"), formatValue.sortAscending);
-    formatObject.insert(QStringLiteral("group"), formatValue.group);
-    formatObject.insert(QStringLiteral("includeDescendants"), formatValue.includeDescendants);
-    if (formatValue.hasFolderSizePolicy) {
-        formatObject.insert(QStringLiteral("calculateFolderSizes"), formatValue.calculateFolderSizes);
-    }
     return mutate(
         folder,
-        [&formatObject](QJsonObject &metadata) {
-            metadata.insert(QStringLiteral("format"), formatObject);
+        [&folder, &formatValue](QJsonObject &metadata, QString &reason) {
+            const QString key = QStringLiteral("format");
+            const QJsonValue existing = metadata.value(key);
+            if (!isAbsent(existing) && !supportedFormat(existing)) {
+                reason = unsupportedValue(folder, key);
+                return false;
+            }
+            // Fields and column ids Plasma Opus doesn't know are kept; unknown columns follow the known ones.
+            QJsonObject formatObject = existing.toObject();
+            QJsonArray columns = QJsonArray::fromStringList(formatValue.columns);
+            for (const QJsonValue &column : formatObject.value(QStringLiteral("columns")).toArray()) {
+                if (!AllowedColumns.contains(column.toString())) {
+                    columns.append(column);
+                }
+            }
+            formatObject.insert(QStringLiteral("view"), formatValue.view);
+            formatObject.insert(QStringLiteral("columns"), columns);
+            formatObject.insert(QStringLiteral("sortKey"), formatValue.sortKey.left(19));
+            formatObject.insert(QStringLiteral("sortAsc"), formatValue.sortAscending);
+            formatObject.insert(QStringLiteral("group"), formatValue.group);
+            formatObject.insert(QStringLiteral("includeDescendants"), formatValue.includeDescendants);
+            if (formatValue.hasFolderSizePolicy) {
+                formatObject.insert(QStringLiteral("calculateFolderSizes"), formatValue.calculateFolderSizes);
+            } else {
+                formatObject.remove(QStringLiteral("calculateFolderSizes"));
+            }
+            metadata.insert(key, formatObject);
+            return true;
         },
         error);
 }
@@ -441,8 +566,15 @@ bool FolderMetadata::clearFormat(const QString &folder, QString *error)
 {
     return mutate(
         folder,
-        [](QJsonObject &metadata) {
-            metadata.remove(QStringLiteral("format"));
+        [&folder](QJsonObject &metadata, QString &reason) {
+            const QString key = QStringLiteral("format");
+            Format existing;
+            if (!isAbsent(metadata.value(key)) && !format(metadata, &existing)) {
+                reason = unsupportedValue(folder, key);
+                return false;
+            }
+            metadata.remove(key);
+            return true;
         },
         error);
 }

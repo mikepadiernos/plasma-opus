@@ -26,19 +26,19 @@ groups have every feature checked and merged into `main`, Development groups
 have a milestone in progress, and Planned groups have not started. M27–M31
 are merged, and their Plasma checks are recorded in [pending tasks](TODO.md).
 
-| Milestones | Focus                                        | Status                                                                            | Jump to                         |
-| ---------- | -------------------------------------------- | --------------------------------------------------------------------------------- | ------------------------------- |
-| M01–M04    | Core dual pane and listing depth             | ![Merged](https://img.shields.io/badge/Merged-8957e5?style=flat-square)           | [M01](#m01-core-dual-pane)      |
-| M05–M08    | Preview, gallery and editor                  | ![Merged](https://img.shields.io/badge/Merged-8957e5?style=flat-square)           | [M05](#m05-preview-and-gallery) |
-| M09–M14    | Tools, interface customization, translations | ![Merged](https://img.shields.io/badge/Merged-8957e5?style=flat-square)           | [M09](#m09-tools)               |
-| M15–M16    | Workspaces and their settings                | ![Merged](https://img.shields.io/badge/Merged-8957e5?style=flat-square)           | [M15](#m15-workspaces)          |
-| M17–M18    | Themes and their settings                    | ![Merged](https://img.shields.io/badge/Merged-8957e5?style=flat-square)           | [M17](#m17-themes)              |
-| M19–M20    | Branding and its settings                    | ![Merged](https://img.shields.io/badge/Merged-8957e5?style=flat-square)           | [M19](#m19-branding)            |
-| M21–M22    | Advanced search and its settings             | ![Merged](https://img.shields.io/badge/Merged-8957e5?style=flat-square)           | [M21](#m21-advanced-search)     |
-| M23–M24    | Native tagging and its settings              | ![Merged](https://img.shields.io/badge/Merged-8957e5?style=flat-square)           | [M23](#m23-native-tagging)      |
-| M25–M26    | Yazi mode and its settings                   | ![Merged](https://img.shields.io/badge/Merged-8957e5?style=flat-square)           | [M25](#m25-yazi-mode)           |
-| M27–M31    | Integrations, Nextcloud and shortcuts        | ![Merged](https://img.shields.io/badge/Merged-8957e5?style=flat-square)           | [M27](#m27-integrations)        |
-| M32        | Refinements                                  | ![Planned](https://img.shields.io/badge/Planned-6e7781?style=flat-square)         | [M32](#m32-refinements)         |
+| Milestones | Focus                                        | Status                                                                    | Jump to                         |
+| ---------- | -------------------------------------------- | ------------------------------------------------------------------------- | ------------------------------- |
+| M01–M04    | Core dual pane and listing depth             | ![Merged](https://img.shields.io/badge/Merged-8957e5?style=flat-square)   | [M01](#m01-core-dual-pane)      |
+| M05–M08    | Preview, gallery and editor                  | ![Merged](https://img.shields.io/badge/Merged-8957e5?style=flat-square)   | [M05](#m05-preview-and-gallery) |
+| M09–M14    | Tools, interface customization, translations | ![Merged](https://img.shields.io/badge/Merged-8957e5?style=flat-square)   | [M09](#m09-tools)               |
+| M15–M16    | Workspaces and their settings                | ![Merged](https://img.shields.io/badge/Merged-8957e5?style=flat-square)   | [M15](#m15-workspaces)          |
+| M17–M18    | Themes and their settings                    | ![Merged](https://img.shields.io/badge/Merged-8957e5?style=flat-square)   | [M17](#m17-themes)              |
+| M19–M20    | Branding and its settings                    | ![Merged](https://img.shields.io/badge/Merged-8957e5?style=flat-square)   | [M19](#m19-branding)            |
+| M21–M22    | Advanced search and its settings             | ![Merged](https://img.shields.io/badge/Merged-8957e5?style=flat-square)   | [M21](#m21-advanced-search)     |
+| M23–M24    | Native tagging and its settings              | ![Merged](https://img.shields.io/badge/Merged-8957e5?style=flat-square)   | [M23](#m23-native-tagging)      |
+| M25–M26    | Yazi mode and its settings                   | ![Merged](https://img.shields.io/badge/Merged-8957e5?style=flat-square)   | [M25](#m25-yazi-mode)           |
+| M27–M31    | Integrations, Nextcloud and shortcuts        | ![Merged](https://img.shields.io/badge/Merged-8957e5?style=flat-square)   | [M27](#m27-integrations)        |
+| M32        | Refinements                                  | ![Planned](https://img.shields.io/badge/Planned-6e7781?style=flat-square) | [M32](#m32-refinements)         |
 
 ## Contents
 
@@ -364,7 +364,7 @@ in a local gallery, and edit or convert images without leaving Plasma Opus.
       click-to-play available independently of gallery playback [#123]
 
 **Caveats:** [Previews and gallery](CAVEATS.md#previews-and-gallery), tracked in
-[#259], [#260], [#264], [#266], [#267], [#302], [#303] and [#304].
+[#259], [#260], [#264], [#266], [#267], [#302] and [#303].
 
 ### M06: Preview and gallery settings
 
@@ -409,7 +409,7 @@ other files open in their default application. Folders and executable handling
 are unchanged, and the preview panel's Open button opens the application.
 
 **Caveats:** [Previews and gallery](CAVEATS.md#previews-and-gallery), tracked in
-[#260], [#264], [#266], [#302], [#303] and [#304].
+[#260], [#264], [#266], [#302] and [#303].
 
 ### M07: Editor
 
@@ -2900,7 +2900,6 @@ the end of this file.
 [#298]: https://github.com/mikepadiernos/plasma-opus/issues/298
 [#302]: https://github.com/mikepadiernos/plasma-opus/issues/302
 [#303]: https://github.com/mikepadiernos/plasma-opus/issues/303
-[#304]: https://github.com/mikepadiernos/plasma-opus/issues/304
 [#307]: https://github.com/mikepadiernos/plasma-opus/issues/307
 [#309]: https://github.com/mikepadiernos/plasma-opus/issues/309
 [#311]: https://github.com/mikepadiernos/plasma-opus/issues/311

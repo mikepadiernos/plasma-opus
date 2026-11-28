@@ -70,9 +70,7 @@ bool HiddenFolders::hidesItem(const KFileItem &item, bool showHiddenFiles)
 
 bool HiddenFolders::setHidden(const QString &folder, bool hidden, QString *error)
 {
-    // FolderMetadata only refuses to replace an unreadable file when it can report why.
-    QString localError;
-    if (!FolderMetadata::setHidden(folder, hidden, error ? error : &localError)) {
+    if (!FolderMetadata::setHidden(folder, hidden, error)) {
         return false;
     }
     forget(folder);

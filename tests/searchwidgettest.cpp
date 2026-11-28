@@ -19,6 +19,7 @@
 
 #include <KActionCollection>
 #include <KFilePlacesModel>
+#include <KLocalizedString>
 #include <KSharedConfig>
 #include <KToolBar>
 
@@ -988,7 +989,7 @@ private Q_SLOTS:
         start->click();
         QTRY_VERIFY_WITH_TIMEOUT(start->isEnabled(), 10000);
         QVERIFY(fallback->isVisible());
-        QCOMPARE(fallback->text(), QStringLiteral("Search Current Folder Live"));
+        QCOMPARE(KLocalizedString::removeAcceleratorMarker(fallback->text()), QStringLiteral("Search Current Folder Live"));
         scope->setCurrentIndex(2);
         QVERIFY(!fallback->isVisible());
         scope->setCurrentIndex(1);

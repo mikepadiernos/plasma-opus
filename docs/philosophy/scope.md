@@ -48,7 +48,8 @@ transfer workflows with power-user tools. See the
   properties, settings, icons and application integration wherever they fit.
   Planned desktop integrations are described in the
   [KDE Plasma integration plan](../integrations/kde-plasma.md).
-- **Compatibility:** support a subset of upstream `.mfm.json` metadata. See
+- **Compatibility:** support a subset of upstream `.mfm.json` metadata and keep
+  the rest unchanged when writing. See
   [metadata limitations](../CAVEATS.md#folder-metadata-and-listings) and the
   [behaviour references](../README.md#behaviour-references).
 - **Delivery:** track tested, incremental milestones in the

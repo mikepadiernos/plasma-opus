@@ -2294,7 +2294,12 @@ void MainWindow::editFolderLook(const QUrl &folder)
     const int colorIndex = color->findData(existingColor);
     if (colorIndex >= 0) {
         color->setCurrentIndex(colorIndex);
+    } else if (!existingColor.isEmpty()) {
+        color->addItem(existingColor, existingColor);
+        color->setCurrentIndex(color->count() - 1);
     }
+    // Only a changed colour is written, so a stored value the dialog doesn't offer is kept.
+    const int initialColorIndex = color->currentIndex();
     const bool wasHidden = FolderMetadata::hidden(metadata);
     auto *hidden = new QCheckBox(i18nc("@option:check", "Hide in parent folder"), &dialog);
     hidden->setObjectName(QStringLiteral("folderLookHidden"));
@@ -2318,7 +2323,7 @@ void MainWindow::editFolderLook(const QUrl &folder)
     }
 
     QString error;
-    if (!FolderMetadata::setFolderColor(folder.toLocalFile(), color->currentData().toString(), &error)) {
+    if (color->currentIndex() != initialColorIndex && !FolderMetadata::setFolderColor(folder.toLocalFile(), color->currentData().toString(), &error)) {
         showStatusMessage(i18nc("@info:status", "Could not set the folder colour: %1", error));
         return;
     }

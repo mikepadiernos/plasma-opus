@@ -310,9 +310,8 @@ Preferences also include
 ## Safety and limitations
 
 > [!WARNING]
-> Back up existing `.mfm.json` files before editing: unsupported metadata may be
-> discarded. Synchronization is not undoable and can leave partial results;
-> automatic transfer overwrite can replace files without asking.
+> Synchronization is not undoable and can leave partial results; automatic
+> transfer overwrite can replace files without asking.
 
 See [caveats and limitations](docs/CAVEATS.md) for restrictions and workarounds,
 [reported bugs](docs/BUGS.md) for tracked issues, and [edge cases](docs/EDGE.md)

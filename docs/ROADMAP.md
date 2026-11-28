@@ -266,7 +266,7 @@ Krusader and Orcinus.
 
 **Caveats:** [Archives](CAVEATS.md#archives) and
 [folder metadata and listings](CAVEATS.md#folder-metadata-and-listings). Tracked
-in [#36], [#255], [#256], [#257], [#258], [#261], [#262], [#263] and [#265].
+in [#36], [#255], [#256], [#261], [#262], [#263] and [#265].
 
 ### M04: Listing depth settings
 
@@ -324,7 +324,7 @@ Settings for M03 listing depth, stored in KConfig.
         [#112]
 
 **Caveats:** [Folder metadata and listings](CAVEATS.md#folder-metadata-and-listings),
-tracked in [#257], [#258], [#262] and [#263].
+tracked in [#262] and [#263].
 
 ### M05: Preview and gallery
 
@@ -2858,8 +2858,6 @@ the end of this file.
 [#254]: https://github.com/mikepadiernos/plasma-opus/issues/254
 [#255]: https://github.com/mikepadiernos/plasma-opus/issues/255
 [#256]: https://github.com/mikepadiernos/plasma-opus/issues/256
-[#257]: https://github.com/mikepadiernos/plasma-opus/issues/257
-[#258]: https://github.com/mikepadiernos/plasma-opus/issues/258
 [#259]: https://github.com/mikepadiernos/plasma-opus/issues/259
 [#260]: https://github.com/mikepadiernos/plasma-opus/issues/260
 [#261]: https://github.com/mikepadiernos/plasma-opus/issues/261

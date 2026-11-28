@@ -202,25 +202,11 @@ Plasma Opus hands archives to Ark, KDE's archiving tool, when it is installed
 Folder metadata, flat view and folder sizes have these limits, each tracked in
 its own issue:
 
-- **Metadata compatibility:** Plasma Opus supports a subset of Max File
-  Manager's local `.mfm.json` metadata. Writing sanitizes the file and may
-  discard unsupported fields or values, so back up existing metadata before
-  editing. ([#257][issue-257])
-
-  - **Recommendation:** Back up `.mfm.json` before editing it in Plasma Opus. A
-    text editor can inspect a backup, but cannot make Plasma Opus apply
-    unsupported metadata.
-    - Comment: [#257.7021742864][comment-257]
-  - **Alternative:** Keep a versioned copy of metadata outside Plasma Opus.
-    - Comment:
-      [#257.7029666537](https://github.com/mikepadiernos/plasma-opus/issues/257#issuecomment-7029666537)
-  - **Native tagging:** [M23 libraries](#native-tagging) are separate from
-    `.mfm.json` and do not make its writes lossless.
-    - Comment: [#257.7021742864][comment-257]
-
 - **Metadata limits:** Metadata files are limited to 4,096 bytes, notes to 500
-  characters and pins to 200 per folder. Folder-format rules are stored in local
-  metadata; remote locations use defaults unless the pane's format is locked.
+  characters and pins to 200 per folder. An edit that would exceed these limits
+  or replace a stored value Plasma Opus doesn't support is refused, leaving
+  `.mfm.json` unchanged. Folder-format rules are stored in local metadata;
+  remote locations use defaults unless the pane's format is locked.
   ([#263][issue-263])
 
   - **Recommendation:** Keep metadata within these limits; lock the pane format
@@ -4677,7 +4663,6 @@ dependency and varies with the chosen output method.
 [issue-36]: https://github.com/mikepadiernos/plasma-opus/issues/36
 [issue-255]: https://github.com/mikepadiernos/plasma-opus/issues/255
 [issue-256]: https://github.com/mikepadiernos/plasma-opus/issues/256
-[issue-257]: https://github.com/mikepadiernos/plasma-opus/issues/257
 [issue-259]: https://github.com/mikepadiernos/plasma-opus/issues/259
 [issue-260]: https://github.com/mikepadiernos/plasma-opus/issues/260
 [issue-261]: https://github.com/mikepadiernos/plasma-opus/issues/261
@@ -4700,7 +4685,6 @@ dependency and varies with the chosen output method.
 [comment-36]: https://github.com/mikepadiernos/plasma-opus/issues/36#issuecomment-7021740511
 [comment-255]: https://github.com/mikepadiernos/plasma-opus/issues/255#issuecomment-7021741358
 [comment-256]: https://github.com/mikepadiernos/plasma-opus/issues/256#issuecomment-7021742119
-[comment-257]: https://github.com/mikepadiernos/plasma-opus/issues/257#issuecomment-7021742864
 [comment-259]: https://github.com/mikepadiernos/plasma-opus/issues/259#issuecomment-7021744368
 [comment-260]: https://github.com/mikepadiernos/plasma-opus/issues/260#issuecomment-7021745029
 [comment-261]: https://github.com/mikepadiernos/plasma-opus/issues/261#issuecomment-7021745774

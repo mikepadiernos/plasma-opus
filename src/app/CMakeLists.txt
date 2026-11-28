@@ -194,6 +194,8 @@ add_library(opusfm_app STATIC
     startuppresentation.h
     symbolicactionicons.cpp
     symbolicactionicons.h
+    symlinkdialog.cpp
+    symlinkdialog.h
     tageditdialog.cpp
     tageditdialog.h
     tagfieldmanagerwidget.cpp

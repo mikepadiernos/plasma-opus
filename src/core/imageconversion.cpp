@@ -2,6 +2,7 @@
 
 #include "imageconversion.h"
 
+#include "filepublish.h"
 #include "imageediting.h"
 #include "previewcontent.h"
 
@@ -89,6 +90,10 @@ QList<ImageConversion::Failure> ImageConversion::convert(const QList<Entry> &ent
         }
         if (!temporary.flush()) {
             failures.append({entry, temporary.errorString()});
+            continue;
+        }
+        if (const QString error = FilePublish::applyDefaultMode(temporary.handle()); !error.isEmpty()) {
+            failures.append({entry, error});
             continue;
         }
         temporary.close();

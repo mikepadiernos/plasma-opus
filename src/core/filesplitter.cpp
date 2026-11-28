@@ -2,6 +2,8 @@
 
 #include "filesplitter.h"
 
+#include "filepublish.h"
+
 #include <KLocalizedString>
 
 #include <QFile>
@@ -54,6 +56,11 @@ bool finishOutput(QFile &file, FileSplitter::Result &result)
 {
     if (!file.flush()) {
         result.error = i18nc("@info", "Could not finish writing %1: %2", file.fileName(), file.errorString());
+        return false;
+    }
+    // Outputs are created owner-only and opened up only once complete, so incomplete ones stay private.
+    if (const QString error = FilePublish::applyDefaultMode(file.handle()); !error.isEmpty()) {
+        result.error = i18nc("@info", "Could not finish writing %1: %2", file.fileName(), error);
         return false;
     }
     file.close();

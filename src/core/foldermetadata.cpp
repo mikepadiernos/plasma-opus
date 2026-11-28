@@ -384,6 +384,25 @@ bool FolderMetadata::setFolderColor(const QString &folder, const QString &color,
         error);
 }
 
+bool FolderMetadata::setHidden(const QString &folder, bool hiddenValue, QString *error)
+{
+    return mutate(
+        folder,
+        [hiddenValue](QJsonObject &metadata) {
+            if (hiddenValue) {
+                metadata.insert(QStringLiteral("hidden"), true);
+            } else {
+                metadata.remove(QStringLiteral("hidden"));
+            }
+        },
+        error);
+}
+
+bool FolderMetadata::hidden(const QJsonObject &metadata)
+{
+    return metadata.value(QStringLiteral("hidden")).toBool();
+}
+
 bool FolderMetadata::setFormat(const QString &folder, const Format &formatValue, QString *error)
 {
     if (!AllowedViews.contains(formatValue.view) || !AllowedGroups.contains(formatValue.group)) {

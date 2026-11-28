@@ -227,12 +227,23 @@ tests and caveats.
   - **Exercise:** Test stale metadata previews, linked files, unsupported
     formats and missing, failing or incompatible ExifTool and image codecs.
   - **Verify:** Failures and any possible partial modifications are reported.
+  - **Note:** Batch conversion never replaces an existing file. Where the
+    destination doesn't support atomic no-replace renames, it publishes with
+    a hard link; where it doesn't support hard links either, such as FAT,
+    exFAT and some FUSE filesystems, it copies into a newly created file.
+    During that copy, a partly written, owner-only file briefly exists under
+    the final name, and a failed copy removes only the file it created.
+    [Publish tests](../tests/filepublishtest.cpp) and
+    [conversion tests](../tests/imageconversiontest.cpp) simulate these
+    filesystems; check a real FAT or FUSE destination manually.
 
 **References:** [preview](../src/core/previewcontent.cpp),
 [editor](../src/app/editorpanel.cpp),
 [folder metadata](../src/core/foldermetadata.cpp),
 [folder metadata tests](../tests/foldermetadatatest.cpp),
 [media metadata](../src/core/metadataeditor.cpp),
+[image conversion](../src/core/imageconversion.cpp),
+[file publication](../src/core/filepublish.cpp),
 [preview tests](../tests/previewcontenttest.cpp) and
 [metadata tests](../tests/metadataeditortest.cpp).
 
